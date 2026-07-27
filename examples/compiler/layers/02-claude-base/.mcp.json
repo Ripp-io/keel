@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "claude-native-server": {
+      "_keel": { "force": true },
+      "command": "claude-native-mcp",
+      "args": ["--mode", "native"]
+    },
+    "shared-server": {
+      "command": "shared-mcp-from-claude"
+    }
+  }
+}

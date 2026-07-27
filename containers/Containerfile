@@ -1,0 +1,113 @@
+# ============================================================
+# Keel — AI Coding Tool Workspace Engine
+# ============================================================
+#
+# Base image with workspace engine and a configurable AI tool
+# adapter. Default adapter: claude.
+#
+# Build (default — Claude Code):
+#   podman build -t keel-claude:latest -f containers/Containerfile .
+#
+# Build with specific tool version:
+#   podman build -t keel-claude:2.1.126 --build-arg TOOL_VERSION=2.1.126 -f containers/Containerfile .
+#
+# Build with a different adapter:
+#   podman build -t keel-cursor:latest --build-arg AGENT=cursor -f containers/Containerfile .
+#
+# ============================================================
+
+# -----------------------------------------------------------
+# Stage 1: Build keel CLI
+# -----------------------------------------------------------
+# golang:1.26 — pinned to SHA256 digest for reproducible, tamper-evident builds.
+# To update: pull the latest digest from https://hub.docker.com/_/golang
+FROM golang:1.26 AS builder
+
+ARG KEEL_BUILD=dev
+
+WORKDIR /build
+COPY go.mod go.sum ./
+RUN go mod download
+COPY cmd/ cmd/
+COPY pkg/ pkg/
+RUN CGO_ENABLED=0 go build -ldflags "-X main.version=${KEEL_BUILD}" -o /keel-cli ./cmd/keel
+
+# -----------------------------------------------------------
+# Stage 2: Runtime
+# -----------------------------------------------------------
+# node:22-bookworm-slim — pinned to SHA256 digest for reproducible, tamper-evident builds.
+# To update: pull the latest digest from https://hub.docker.com/_/node
+FROM node:22-bookworm-slim@sha256:0a988f892e574b11908efd6e1b08ea1a578745c7ab3b693219682665e6c9ba85
+
+ARG AGENT=claude
+ARG TOOL_VERSION=latest
+ARG KEEL_BUILD=dev
+
+LABEL maintainer="Charly Rippenkroeger <charly@ripp.io>" \
+      description="AI coding tool workspace engine" \
+      io.k8s.description="Containerized AI coding environment" \
+      io.k8s.display-name="Keel (${AGENT})" \
+      keel.agent="${AGENT}" \
+      keel.version="${KEEL_BUILD}"
+
+# -----------------------------------------------------------
+# System packages + locale
+# -----------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        git \
+        gnupg \
+        jq \
+        openssh-client \
+        wget \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV LANG=C.utf8 LC_ALL=C.utf8 TERM=xterm-256color
+
+# -----------------------------------------------------------
+# Non-root user + directories
+# -----------------------------------------------------------
+RUN useradd -m -s /bin/bash keel \
+    && mkdir -p /keel/workspace /home/keel/.ssh /keel/layers \
+    && chown -R keel:keel /keel /home/keel \
+    && chmod 700 /home/keel/.ssh
+
+WORKDIR /keel/workspace
+
+# -----------------------------------------------------------
+# Keel CLI binary
+# -----------------------------------------------------------
+COPY --from=builder /keel-cli /usr/local/bin/keel
+
+# -----------------------------------------------------------
+# Install the selected adapter's tool
+# -----------------------------------------------------------
+COPY --chmod=755 adapters/${AGENT}/ /usr/local/lib/adapter/
+RUN TOOL_VERSION=${TOOL_VERSION} /usr/local/lib/adapter/install.sh
+
+# -----------------------------------------------------------
+# Config + lib + entrypoint
+# -----------------------------------------------------------
+COPY --chown=keel:keel containers/config/instructions.md /keel/layers/00-base/instructions.md
+COPY --chown=keel:keel containers/config/bashrc /home/keel/.bashrc
+COPY --chmod=755 --chown=keel:keel containers/lib/config.sh /usr/local/lib/config.sh
+COPY --chmod=755 --chown=keel:keel containers/lib/git.sh /usr/local/lib/git.sh
+COPY --chmod=755 --chown=keel:keel containers/lib/launch.sh /usr/local/lib/launch.sh
+COPY --chmod=755 --chown=keel:keel containers/lib/status.sh /usr/local/lib/status.sh
+COPY --chmod=755 --chown=keel:keel containers/lib/workspace.sh /usr/local/lib/workspace.sh
+COPY --chmod=755 --chown=keel:keel containers/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+ENV AGENT=${AGENT}
+ENV CONFIG_LAYERS=/keel/layers/*
+ENV KEEL_BUILD=${KEEL_BUILD}
+
+USER keel
+
+# HEALTHCHECK is intentionally omitted for the base image. This image
+# runs interactively and the agent tool manages its own lifecycle.
+# The runner image (containers/runner/Containerfile) adds a HEALTHCHECK
+# for orchestrated environments.
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD []

@@ -1,0 +1,8 @@
+schema: v1
+name: Company
+
+permissions:
+  rules:
+    - source: permissions.json
+  policy:
+    merge: additive

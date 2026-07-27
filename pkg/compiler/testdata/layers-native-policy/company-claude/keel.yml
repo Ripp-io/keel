@@ -1,0 +1,7 @@
+schema: v1-claude
+
+files:
+  settings.json:
+    force: true
+  commands/security-scan.md:
+    force: true

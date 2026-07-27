@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "sonarqube": {
+      "command": "npx",
+      "args": ["sonarqube-mcp-server"],
+      "env": {"SONAR_TOKEN": "${SONAR_TOKEN}"}
+    }
+  }
+}

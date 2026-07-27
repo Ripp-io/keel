@@ -1,0 +1,8 @@
+{
+  "preToolUse": [
+    {"matcher": "Write(**/secrets/**)", "action": "deny"}
+  ],
+  "_keel": {
+    "preToolUse": { "force": true }
+  }
+}

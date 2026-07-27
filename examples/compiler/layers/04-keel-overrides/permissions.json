@@ -1,0 +1,4 @@
+{
+  "allow": ["Write", "Edit"],
+  "deny": ["Bash(shutdown)"]
+}

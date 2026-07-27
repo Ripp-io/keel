@@ -1,0 +1,9 @@
+schema: v1
+name: platform-standards
+description: Platform team coding standards
+
+instructions:
+  - source: instructions.md
+
+settings:
+  model: claude-sonnet-4-20250514

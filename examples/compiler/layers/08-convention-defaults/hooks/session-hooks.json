@@ -1,0 +1,8 @@
+{
+  "SessionStart": [
+    {
+      "type": "command",
+      "command": "echo convention-hook-fired"
+    }
+  ]
+}

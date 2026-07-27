@@ -1,0 +1,23 @@
+schema: v1
+name: security-policy
+description: Organization-wide security standards for AI coding agents
+
+instructions:
+  - source: instructions.md
+
+permissions:
+  rules:
+    - source: permissions.json
+  policy:
+    merge: additive
+
+hooks:
+  - source: hooks.json
+
+files:
+  "CLAUDE.md":
+    force: true
+  ".claude/permissions.json":
+    force: true
+  ".claude/hooks.json":
+    force: true

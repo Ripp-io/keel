@@ -1,0 +1,9 @@
+schema: v1
+name: keel-authoring
+description: Skills and knowledge for authoring Keel configuration layers, skills, governance, and templates.
+
+instructions:
+  - source: instructions.md
+
+skills:
+  - source: skills/

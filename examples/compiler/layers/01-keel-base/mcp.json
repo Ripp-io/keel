@@ -1,0 +1,33 @@
+{
+  "mcpServers": {
+    "sonarqube": {
+      "_keel": { "force": true },
+      "command": "sonar-mcp",
+      "args": ["--token", "${SONAR_TOKEN}"]
+    },
+    "gitlab": {
+      "command": "gitlab-mcp",
+      "args": ["--token", "${GITLAB_TOKEN}"]
+    },
+    "claude-only-server": {
+      "_keel": { "condition": "keel.agent == 'claude'" },
+      "command": "claude-specific-mcp"
+    },
+    "cursor-only-server": {
+      "_keel": { "condition": "keel.agent == 'cursor'" },
+      "command": "cursor-specific-mcp"
+    },
+    "not-cursor-server": {
+      "_keel": { "condition": "keel.agent != 'cursor'" },
+      "command": "any-but-cursor-mcp"
+    },
+    "multi-agent-server": {
+      "_keel": { "condition": "keel.agent in ['claude', 'cursor']" },
+      "command": "multi-agent-mcp"
+    },
+    "excluded-agent-server": {
+      "_keel": { "condition": "keel.agent not in ['claude', 'cursor']" },
+      "command": "excluded-agent-mcp"
+    }
+  }
+}

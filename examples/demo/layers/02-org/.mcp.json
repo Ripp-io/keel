@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "jira": {
+      "command": "npx",
+      "args": ["@anthropic-ai/claude-code-jira-mcp"],
+      "env": {
+        "JIRA_TOKEN": "${JIRA_TOKEN}",
+        "JIRA_URL": "${JIRA_URL}"
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+schema: v1
+name: Company
+
+mcp:
+  servers:
+    - source: mcp.json
+
+commands:
+  - source: commands/security-scan.md
+    force: true
+
+hooks:
+  - source: hooks.json

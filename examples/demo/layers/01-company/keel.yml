@@ -1,0 +1,38 @@
+schema: v1
+name: Acme Corp
+description: Enterprise-wide security standards and shared practices
+
+variables:
+  company_wiki: "https://wiki.acme-corp.com"
+  jira_url: "https://acme-corp.atlassian.net"
+
+instructions:
+  - source: instructions.md
+
+permissions:
+  rules:
+    - source: permissions.json
+  policy:
+    merge: additive
+
+mcp:
+  servers:
+    - source: mcp.json
+  policy:
+    denied: [untrusted-server]
+
+hooks:
+  - source: hooks.json
+
+commands:
+  - source: commands/
+
+snippets:
+  - source: snippets/
+
+settings:
+  claude: settings.claude.json
+
+files:
+  "commands/security-scan.md":
+    force: true

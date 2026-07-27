@@ -1,0 +1,46 @@
+variables:
+  GO_IMAGE: golang:1.26
+
+stages:
+  - test
+  - pages
+
+# --- Test ---
+
+test:
+  stage: test
+  image: ${GO_IMAGE}
+  tags: []
+  script:
+    - go vet ./...
+    - go build ./...
+    - go test ./... -short -count=1 -coverprofile=coverage.out
+    - go tool cover -func=coverage.out | tail -1
+    # Fail if total coverage drops below 80%
+    - |
+      COVERAGE=$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}' | tr -d '%')
+      echo "Total coverage: ${COVERAGE}%"
+      if [ "$(echo "$COVERAGE < 80" | bc)" -eq 1 ]; then
+        echo "ERROR: Coverage ${COVERAGE}% is below 80% threshold"
+        exit 1
+      fi
+  coverage: '/total:\s+\(statements\)\s+(\d+\.\d+)%/'
+  rules:
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_MERGE_REQUEST_IID
+
+# --- GitLab Pages ---
+
+pages:
+  stage: pages
+  image: ${GO_IMAGE}
+  tags: []
+  before_script:
+    - CGO_ENABLED=1 go install -tags extended github.com/gohugoio/hugo@v0.160.1
+  script:
+    - hugo -s docs --minify --destination ${CI_PROJECT_DIR}/public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

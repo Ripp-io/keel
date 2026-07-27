@@ -1,0 +1,10 @@
+schema: v1
+name: Company
+description: Company layer with additive permissions
+
+permissions:
+  rules:
+    - source: permissions.json
+
+instructions:
+  - source: instructions.md

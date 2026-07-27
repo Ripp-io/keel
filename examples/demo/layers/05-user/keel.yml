@@ -1,0 +1,14 @@
+schema: v1
+name: Developer Preferences
+description: Personal model and workflow preferences
+
+permissions:
+  rules:
+    - source: permissions.json
+
+commands:
+  - source: commands/
+
+settings:
+  model: opus
+  claude: settings.claude.json

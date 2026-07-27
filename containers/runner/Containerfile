@@ -1,0 +1,43 @@
+# ============================================================
+# Runner — Non-Interactive AI Coding Tool
+# ============================================================
+#
+# Headless container for pipelines, cron jobs, webhooks,
+# and automation. Inherits the adapter from the base image.
+#
+# Build (default — Claude Code):
+#   podman build -t keel-runner-claude:latest --build-arg AGENT=claude \
+#     -f containers/runner/Containerfile .
+#
+# Usage in a pipeline:
+#   podman run --rm \
+#     -v ${CI_PROJECT_DIR}:/keel/workspace:ro,Z \
+#     -v /path/to/sa-key.json:/secrets/gcp-sa.json:ro,Z \
+#     -e ANTHROPIC_VERTEX_PROJECT_ID=my-gcp-project \
+#     keel-runner-claude:latest \
+#     "Review the most recent commit for bugs and security issues"
+#
+# ============================================================
+
+ARG AGENT=claude
+ARG TAG=latest
+FROM keel-${AGENT}:${TAG}
+
+ARG AGENT
+
+LABEL description="Non-interactive AI coding tool runner" \
+      io.k8s.display-name="Keel Runner (${AGENT})" \
+      keel.agent="${AGENT}"
+
+# -----------------------------------------------------------
+# Entrypoint — headless execution
+# -----------------------------------------------------------
+USER root
+COPY --chmod=755 --chown=keel:keel containers/runner/entrypoint.sh /usr/local/bin/entrypoint.sh
+USER keel
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD test -f /tmp/keel-healthy || exit 1
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["Review this codebase for bugs, security issues, and code quality concerns."]

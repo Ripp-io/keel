@@ -1,0 +1,10 @@
+schema: v1
+name: Project
+description: Project layer adds Write permission
+
+permissions:
+  rules:
+    - source: permissions.json
+
+instructions:
+  - source: instructions.md

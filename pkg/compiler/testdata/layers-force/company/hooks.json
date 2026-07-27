@@ -1,0 +1,11 @@
+{
+  "PreToolUse": [
+    {
+      "matcher": "Write(**/secrets/**)",
+      "hooks": [
+        {"type": "command", "command": "echo 'Blocked' && exit 2"}
+      ],
+      "force": true
+    }
+  ]
+}

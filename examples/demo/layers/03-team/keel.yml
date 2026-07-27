@@ -1,0 +1,27 @@
+schema: v1
+name: Data Platform Team
+description: Team conventions, deployment workflow, code review standards
+
+instructions:
+  - source: instructions.md
+
+mcp:
+  servers:
+    - source: mcp.json
+
+commands:
+  - source: commands/
+
+agents:
+  - source: agents/
+
+repos:
+  utils:
+    url: https://gitlab.acme-corp.com/platform/utils.git
+    path: utils
+    branch: main
+  shared-ui:
+    url: https://gitlab.acme-corp.com/platform/shared-ui.git
+    path: shared-ui
+    branch: main
+    required: true

@@ -1,0 +1,35 @@
+schema: v1
+
+instructions:
+  - source: instructions/
+  - source: instructions.md
+
+commands:
+  - source: commands/
+
+agents:
+  - source: agents/
+
+skills:
+  - source: skills/
+
+snippets:
+  - source: snippets/
+
+hooks:
+  - source: hooks/
+  - source: hooks.json
+
+rules:
+  - source: rules/
+
+mcp:
+  servers:
+    - source: mcp.json
+
+init:
+  - source: init.d/
+
+settings:
+  claude: settings.claude.json
+  cursor: settings.cursor.json

@@ -1,0 +1,17 @@
+# Container shell prompt
+# Shows: project directory, git branch (if in a repo)
+
+__git_branch() {
+    local branch
+    branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
+    [ -n "${branch}" ] && echo " (${branch})"
+}
+
+# Cyan directory, yellow git branch, white prompt
+PS1='\[\033[0;36m\]\w\[\033[0;33m\]$(__git_branch)\[\033[0m\] \$ '
+
+# Useful aliases
+alias ll='ls -la --color=auto'
+alias gs='git status'
+alias gd='git diff'
+alias gl='git log --oneline -20'

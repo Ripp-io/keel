@@ -1,0 +1,8 @@
+schema: v1
+name: Project
+
+mcp:
+  servers:
+    - source: mcp.json
+  policy:
+    allowed: [sonarqube, jira]

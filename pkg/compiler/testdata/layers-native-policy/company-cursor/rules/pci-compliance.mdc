@@ -1,0 +1,5 @@
+---
+description: "PCI-DSS compliance rules"
+alwaysApply: true
+---
+PCI compliance rules -- force-locked.

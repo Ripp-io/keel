@@ -1,0 +1,14 @@
+{
+  "UserPromptSubmit": [
+    {
+      "type": "command",
+      "command": "${keel:keel.bin.project}/check-env.sh"
+    }
+  ],
+  "PostToolUse": [
+    {
+      "type": "command",
+      "command": "${keel:keel.deps.fixture-tool.path} --check"
+    }
+  ]
+}

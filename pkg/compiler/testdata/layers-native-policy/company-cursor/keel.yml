@@ -1,0 +1,7 @@
+schema: v1-cursor
+
+files:
+  cli-config.json:
+    force: true
+  rules/pci-compliance.mdc:
+    force: true

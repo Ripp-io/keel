@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "sonarqube": {
+      "command": "npx",
+      "args": ["sonarqube-mcp-server"],
+      "env": {
+        "SONAR_TOKEN": "${SONAR_TOKEN}"
+      }
+    },
+    "jira": {
+      "command": "npx",
+      "args": ["jira-mcp-server"],
+      "env": {
+        "JIRA_TOKEN": "${JIRA_TOKEN}"
+      }
+    }
+  }
+}

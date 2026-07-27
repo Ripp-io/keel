@@ -1,0 +1,3 @@
+{
+  "allow": ["Read", "Edit", "Write", "Bash(git:*)", "Bash(npm:*)"]
+}

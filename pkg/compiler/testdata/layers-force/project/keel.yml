@@ -1,0 +1,13 @@
+schema: v1
+name: Project
+
+mcp:
+  servers:
+    - source: mcp.json
+
+commands:
+  - source: commands/security-scan.md
+  - source: commands/build.md
+
+hooks:
+  - source: hooks.json

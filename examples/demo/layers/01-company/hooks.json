@@ -1,0 +1,11 @@
+{
+  "PreToolUse": [
+    {
+      "matcher": "Write(**/secrets/**)",
+      "hooks": [
+        {"type": "command", "command": "echo 'Blocked: writing to secrets/ is not allowed' && exit 2"}
+      ],
+      "force": true
+    }
+  ]
+}

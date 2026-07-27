@@ -1,0 +1,6 @@
+{
+  "allow": ["Read", "Edit"],
+  "_keel": {
+    "merge": "additive"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "PreToolUse": [{"type": "command", "command": "echo keel-base-pre-tool", "force": true}],
+  "PostToolUse": [{"type": "command", "command": "echo keel-base-post-tool"}],
+  "SessionStart": [{"type": "command", "command": "echo keel-base-session-start"}],
+  "Stop": [{"type": "prompt", "prompt": "Summarize what was accomplished"}]
+}

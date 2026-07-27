@@ -1,0 +1,21 @@
+schema: v1
+name: keel-overrides
+description: Cross-source override test layer
+variables:
+  environment: "staging"
+instructions:
+  - source: instructions.md
+commands:
+  - source: commands/
+skills:
+  - source: skills/
+mcp:
+  servers:
+    - source: mcp.json
+hooks:
+  - source: hooks.json
+permissions:
+  rules:
+    - source: permissions.json
+settings:
+  model: opus

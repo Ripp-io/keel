@@ -1,0 +1,19 @@
+schema: v1
+name: Payments Org
+
+instructions:
+  - source: instructions.md
+
+permissions:
+  rules:
+    - source: permissions.json
+
+mcp:
+  servers:
+    - source: mcp.json
+
+agents:
+  - source: agents/code-reviewer.md
+
+commands:
+  - source: commands/compliance-check.md

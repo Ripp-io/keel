@@ -1,0 +1,57 @@
+# ============================================================
+# Dev Environment — Project-Aware Interactive Container
+# ============================================================
+#
+# Extends the root image with dev tooling, repo initialization,
+# and workspace setup. Inherits the adapter from the base image.
+#
+# Build (default — Claude Code):
+#   podman build -t keel-dev-claude:latest --build-arg AGENT=claude \
+#     -f containers/dev/Containerfile .
+#
+# This image is a TEMPLATE. To build a project-specific
+# environment, create your own Containerfile:
+#
+#   FROM keel-dev-claude:latest
+#   COPY layers/ /keel/layers/
+#
+# ============================================================
+
+ARG AGENT=claude
+ARG TAG=latest
+FROM keel-${AGENT}:${TAG}
+
+ARG AGENT
+
+LABEL description="Project-aware AI coding dev environment" \
+      io.k8s.display-name="Keel Dev (${AGENT})" \
+      keel.agent="${AGENT}"
+
+# -----------------------------------------------------------
+# 1. Install developer tools
+# -----------------------------------------------------------
+USER root
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        tmux \
+        vim-tiny \
+        ripgrep \
+        procps \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --chown=keel:keel containers/dev/tmux.conf /home/keel/.tmux.conf
+
+# -----------------------------------------------------------
+# 2. Entrypoint — compile + repo init + workspace init
+# -----------------------------------------------------------
+COPY --chmod=755 --chown=keel:keel containers/dev/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+USER keel
+
+# HEALTHCHECK is intentionally omitted for the dev image. This image
+# runs interactively and the agent tool manages its own lifecycle.
+# The runner image (containers/runner/Containerfile) adds a HEALTHCHECK
+# for orchestrated environments.
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD []

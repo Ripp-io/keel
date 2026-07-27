@@ -1,0 +1,9 @@
+schema: v1
+name: Company
+
+mcp:
+  servers:
+    - source: mcp.json
+  policy:
+    denied: [untrusted-server]
+    enableAll: false

@@ -1,0 +1,174 @@
+schema: v1
+name: keel-base
+version: "1.0"
+description: "Comprehensive Keel DSL test fixture"
+
+variables:
+  api_url: "https://api.example.com"
+  environment: "production"
+
+instructions:
+  - source: instructions.md
+  - source: instructions-carveout.md
+  - source: instructions-template.md
+
+permissions:
+  rules:
+    - source: permissions.json
+  policy:
+    merge: additive
+
+mcp:
+  servers:
+    - source: mcp.json
+  policy:
+    allowed:
+      - sonarqube
+      - gitlab
+    denied:
+      - unsafe-server
+    enableAll: true
+
+hooks:
+  - source: hooks.json
+
+commands:
+  - source: commands/
+
+agents:
+  - source: agents/
+
+skills:
+  - source: skills/
+
+plugins:
+  - source: plugins/
+
+agent-memory:
+  - source: agent-memory/
+
+environment:
+  - source: environment.json
+
+rules:
+  - source: rules/
+
+loop:
+  - source: loop.md
+
+worktree-include:
+  - source: .worktreeinclude
+
+snippets:
+  - source: snippets/
+
+init:
+  - source: init.d/
+
+repos:
+  party-service:
+    url: https://gitlab.example.com/dataverse/party-service.git
+    path: party/party-service
+    branch: main
+    force: true
+  lens-common:
+    url: https://gitlab.example.com/dataverse/lens-common.git
+    path: libs/lens-common
+
+settings:
+  model: sonnet
+  claude: settings.claude.json
+  cursor: settings.cursor.json
+  sandbox:
+    enabled: true
+    auto-allow-bash-if-sandboxed: true
+    excluded-commands:
+      - "rm -rf /"
+    enable-weaker-network-isolation: false
+    filesystem:
+      allow-write:
+        - "/tmp"
+      deny-write:
+        - "/etc"
+      allow-managed-read-paths-only: false
+    network:
+      allowed-domains:
+        - "api.example.com"
+      denied-domains:
+        - "evil.com"
+      allow-local-binding: true
+      http-proxy-port: 8080
+  env:
+    PROJECT_ENV: production
+    API_KEY: "${API_KEY}"
+  worktree:
+    base-ref: main
+    symlink-directories:
+      - node_modules
+    sparse-paths:
+      - "docs/"
+  skill-overrides:
+    legacy-skill: "off"
+  auto-mode:
+    environment:
+      - "Trusted CI environment"
+    allow:
+      - Read
+      - Grep
+    soft-deny:
+      - Write
+  attribution:
+    commit: "Co-Authored-By: Keel"
+    pr: ""
+
+  # Agent/Model
+  effort-level: high
+  always-thinking-enabled: true
+
+  # Hooks meta
+  disable-all-hooks: false
+
+  # MCP controls
+  enabled-mcpjson-servers:
+    - "context7"
+
+  # Git
+  include-git-instructions: true
+  pr-url-template: "https://gitlab.example.com/-/merge_requests"
+
+  # UI
+  output-style: concise
+  language: en
+  show-turn-duration: true
+  spinner-tips-enabled: false
+
+  # Features
+  fast-mode: true
+  auto-memory-enabled: true
+
+  # Misc
+  default-shell: /bin/zsh
+  respect-gitignore: true
+  teammate-mode: auto
+  cleanup-period-days: 30
+
+  # Grouped
+  voice:
+    enabled: false
+  status-line:
+    type: command
+    command: "echo ready"
+  file-suggestion:
+    type: command
+    command: "find . -name '*.go'"
+  auto-updates-channel: stable
+  force-login-method: console
+
+files:
+  "commands/force-locked-cmd.md":
+    force: true
+  "skills/force-locked-skill/":
+    force: true
+
+validate:
+  agentskills: true

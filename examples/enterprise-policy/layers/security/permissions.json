@@ -1,0 +1,7 @@
+{
+  "_keel": {"merge": "additive"},
+  "deny": [
+    "Bash(rm -rf /)",
+    "Bash(chmod 777 *)"
+  ]
+}

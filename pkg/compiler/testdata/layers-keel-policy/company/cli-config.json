@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "permissions.allow": ["Read(*)", "Edit(*)"],
+  "_keel": {
+    "force": false
+  }
+}

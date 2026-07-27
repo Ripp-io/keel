@@ -1,0 +1,4 @@
+{
+  "STAGING_URL": "https://staging.example.com",
+  "FEATURE_FLAGS": "enabled"
+}

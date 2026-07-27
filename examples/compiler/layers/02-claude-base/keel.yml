@@ -1,0 +1,5 @@
+schema: v1-claude
+name: claude-base
+files:
+  "commands/claude-cmd.md":
+    force: true

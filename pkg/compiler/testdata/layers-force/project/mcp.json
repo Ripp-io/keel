@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "sonarqube": {
+      "command": "npx",
+      "args": ["different-sonar-server"],
+      "env": {
+        "SONAR_TOKEN": "${SONAR_TOKEN}"
+      }
+    },
+    "gitlab": {
+      "command": "npx",
+      "args": ["gitlab-mcp"]
+    }
+  }
+}

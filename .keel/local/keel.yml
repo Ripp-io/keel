@@ -1,0 +1,6 @@
+schema: v1
+name: keel-project-local
+description: Project-specific skills for Keel development
+
+skills:
+  - source: skills/

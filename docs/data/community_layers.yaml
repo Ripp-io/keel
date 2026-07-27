@@ -1,0 +1,48 @@
+- name: everything-claude-code
+  repo: affaan-m/everything-claude-code
+  description: Complete agent harness — skills, commands, hooks, agents, and security configs
+  includes: [skills, commands, hooks, agents, rules, mcp]
+  layer: "https://github.com/affaan-m/everything-claude-code.git#main"
+  format: claude-native
+
+- name: andrej-karpathy-skills
+  repo: forrestchang/andrej-karpathy-skills
+  description: Claude Code behavior improvements derived from Andrej Karpathy's observations
+  includes: [skills]
+  layer: "https://github.com/forrestchang/andrej-karpathy-skills.git#main"
+  format: claude-native
+
+- name: gstack
+  repo: garrytan/gstack
+  description: Garry Tan's opinionated setup — 23 tools serving as CEO, Designer, Eng Manager, and more
+  includes: [agents, commands, skills, hooks]
+  layer: "https://github.com/garrytan/gstack.git#main"
+  format: claude-native
+
+- name: get-shit-done
+  repo: gsd-build/get-shit-done
+  description: Meta-prompting, context engineering, and spec-driven development system
+  includes: [skills, commands, rules]
+  layer: "https://github.com/gsd-build/get-shit-done.git#main"
+  format: claude-native
+
+- name: caveman
+  repo: JuliusBrussee/caveman
+  description: Token-efficient skill — cuts 65% of tokens by simplifying Claude's communication style
+  includes: [skills]
+  layer: "https://github.com/JuliusBrussee/caveman.git#main"
+  format: claude-native
+
+- name: awesome-claude-code
+  repo: hesreallyhim/awesome-claude-code
+  description: Curated collection of skills, hooks, slash-commands, and agent orchestrators
+  includes: [skills, commands, hooks, agents]
+  layer: "https://github.com/hesreallyhim/awesome-claude-code.git#main"
+  format: claude-native
+
+- name: antigravity-awesome-skills
+  repo: sickn33/antigravity-awesome-skills
+  description: 1,400+ agentic skills for Claude Code, Cursor, Codex CLI, and more
+  includes: [skills, agents]
+  layer: "https://github.com/sickn33/antigravity-awesome-skills.git#main"
+  format: claude-native

@@ -1,0 +1,31 @@
+schema: v1
+name: Demo Project
+version: v1.0.0
+
+instructions:
+  - source: instructions.md
+
+permissions:
+  rules:
+    - source: permissions.json
+
+commands:
+  - source: commands/build-all.md
+
+agents:
+  - source: agents/qa-engineer.md
+
+settings:
+  model: sonnet
+  claude: settings.claude.json
+  cursor: settings.cursor.json
+
+repos:
+  gateway:
+    url: https://example.com/demo/gateway.git
+    branch: main
+    required: true
+  service:
+    url: https://example.com/demo/service.git
+    branch: main
+    required: true

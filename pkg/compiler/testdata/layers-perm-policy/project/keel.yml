@@ -1,0 +1,6 @@
+schema: v1
+name: Project
+
+permissions:
+  rules:
+    - source: permissions.json

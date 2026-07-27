@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": ["Read", "Edit"]
+  },
+  "mcpServers": {
+    "jira": {
+      "command": "npx",
+      "args": ["jira-mcp-server"],
+      "_keel": {
+        "force": true
+      }
+    }
+  }
+}

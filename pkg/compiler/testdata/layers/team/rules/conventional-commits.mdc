@@ -1,0 +1,5 @@
+---
+description: "Conventional commit message format"
+alwaysApply: true
+---
+Use conventional commits: feat:, fix:, chore:, docs:, refactor:, test:

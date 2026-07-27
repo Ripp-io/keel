@@ -1,0 +1,20 @@
+schema: v1
+name: ACME Corp
+description: Company-wide standards
+
+instructions:
+  - source: instructions.md
+
+permissions:
+  rules:
+    - source: permissions.json
+
+mcp:
+  servers:
+    - source: mcp.json
+
+commands:
+  - source: commands/security-scan.md
+
+hooks:
+  - source: hooks.json

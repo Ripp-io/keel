@@ -1,0 +1,21 @@
+schema: v1
+name: deps-and-bin
+description: Deps and bin overlay test fixture
+
+instructions:
+  - source: instructions.md
+
+bin:
+  - source: bin
+
+deps:
+  fixture-tool:
+    install: "echo 'would install fixture-tool'"
+    verify: "fixture-tool --version"
+
+mcp:
+  servers:
+    - source: mcp-servers.json
+
+hooks:
+  - source: hooks.json

@@ -1,0 +1,13 @@
+{{ $layers := hugo.Data.community_layers }}
+<div class="catalog">
+{{ range $layers }}
+<div class="catalog-entry">
+  <h3><a href="https://github.com/{{ .repo }}">{{ .name }}</a></h3>
+  <p>{{ .description }}</p>
+  <div>
+  {{ range .includes }}<span class="catalog-tag">{{ . }}</span> {{ end }}
+  </div>
+  <div class="highlight"><pre><code>--layer '{{ .layer }}'</code></pre></div>
+</div>
+{{ end }}
+</div>

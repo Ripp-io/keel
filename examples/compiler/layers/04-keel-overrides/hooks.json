@@ -1,0 +1,4 @@
+{
+  "PreToolUse": [{"type": "command", "command": "echo keel-override-pre-tool-attempt"}],
+  "PostToolBatch": [{"type": "command", "command": "echo keel-override-post-batch"}]
+}

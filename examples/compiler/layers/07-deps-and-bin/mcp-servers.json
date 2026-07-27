@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "tool-server": {
+      "command": "${keel:keel.deps.fixture-tool.path}",
+      "args": ["serve"]
+    },
+    "env-checker": {
+      "command": "${keel:keel.bin.project}/check-env.sh"
+    }
+  }
+}

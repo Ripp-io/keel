@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "sonarqube": {
+      "command": "sonar-override-attempt",
+      "args": ["--override"]
+    },
+    "claude-native-server": {
+      "command": "override-claude-native-attempt"
+    },
+    "keel-override-server": {
+      "command": "keel-override-mcp",
+      "args": ["--new"]
+    }
+  }
+}

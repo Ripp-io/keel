@@ -1,0 +1,37 @@
+schema: v1
+name: Demo Project
+version: dev
+description: Multi-service project — gateway, UI, and backend
+
+instructions:
+  - source: instructions.md
+
+permissions:
+  rules:
+    - source: permissions.json
+
+commands:
+  - source: commands/
+
+skills:
+  - source: skills/
+
+settings:
+  model: sonnet
+  cursor: settings.cursor.json
+
+repos:
+  gateway:
+    url: https://gitlab.acme-corp.com/demo/gateway.git
+    path: gateway
+    branch: main
+    required: true
+  ui:
+    url: https://gitlab.acme-corp.com/demo/ui.git
+    path: ui
+    branch: main
+  service:
+    url: https://gitlab.acme-corp.com/demo/service.git
+    path: service
+    branch: main
+    required: true

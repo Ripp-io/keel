@@ -1,0 +1,138 @@
+# ============================================================
+# Keel .gitignore
+# ============================================================
+
+# --- Project ---
+/local/
+/plans/
+.ripp/
+.keel/config.yml
+
+# --- Go ---
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+vendor/
+*.prof
+
+# --- Build / Dist ---
+/dist/
+/build/
+/tmp/
+*.log
+*.out
+
+# --- Hugo ---
+.hugo_build.lock
+/public/
+/resources/_gen/
+docs/resources/_gen/
+
+# --- Container ---
+# (build logs, layer caches)
+
+# --- Secrets / Environment ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# ============================================================
+# IDE / Editor
+# ============================================================
+
+# JetBrains (GoLand, IntelliJ, WebStorm)
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Cursor
+.cursorignore
+.cursorindexingignore
+
+# Zed
+.zed/
+
+# JetBrains Fleet
+.fleet/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# Vim / Neovim
+*.swp
+*.swo
+*~
+tags
+.nvimlog
+
+# Emacs
+\#*\#
+.#*
+*.elc
+auto-save-list/
+
+# ============================================================
+# AI Coding Tools
+# ============================================================
+
+# Claude Code / Cursor (compiled output — managed by Keel)
+.claude/
+.cursor/
+
+# Aider
+.aider*
+!.aiderignore
+
+# Codeium / Windsurf
+.codeiumignore
+
+# GitHub Copilot
+.copilot/
+
+# ============================================================
+# OS
+# ============================================================
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+Icon?
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.Trash-*
+.nfs*

@@ -1,0 +1,5 @@
+schema: v1-cursor
+name: cursor-base
+files:
+  "commands/cursor-cmd.md":
+    force: true
