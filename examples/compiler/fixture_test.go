@@ -618,6 +618,11 @@ func TestFixture_DepsAndBin_Claude(t *testing.T) {
 		assert.Contains(t, settings, "check-env.sh")
 		assert.NotContains(t, settings, "${keel:keel.bin.project}")
 	})
+	t.Run("Hooks_HooksDirResolved", func(t *testing.T) {
+		settings := readFile(t, outputDir, ".claude/settings.json")
+		assert.Contains(t, settings, "on-session-end.sh")
+		assert.NotContains(t, settings, "${keel:keel.hooks.dir}", "keel.hooks.dir should be resolved in hook commands")
+	})
 	t.Run("Instructions_DepVarsResolved", func(t *testing.T) {
 		claudeMD := readFile(t, outputDir, "CLAUDE.md")
 		assert.NotContains(t, claudeMD, "${keel:keel.deps")
@@ -666,6 +671,11 @@ func TestFixture_DepsAndBin_Cursor(t *testing.T) {
 		hooks := readFile(t, outputDir, ".cursor/hooks.json")
 		assert.Contains(t, hooks, "check-env.sh")
 		assert.NotContains(t, hooks, "${keel:keel.bin.project}")
+	})
+	t.Run("Hooks_HooksDirResolved", func(t *testing.T) {
+		hooks := readFile(t, outputDir, ".cursor/hooks.json")
+		assert.Contains(t, hooks, "on-session-end.sh")
+		assert.NotContains(t, hooks, "${keel:keel.hooks.dir}", "keel.hooks.dir should be resolved in hook commands")
 	})
 	t.Run("Instructions_DepVarsResolved", func(t *testing.T) {
 		rules := readFile(t, outputDir, ".cursor/rules/00-keel.mdc")

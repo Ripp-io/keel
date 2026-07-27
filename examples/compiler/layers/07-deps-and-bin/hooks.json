@@ -10,5 +10,11 @@
       "type": "command",
       "command": "${keel:keel.deps.fixture-tool.path} --check"
     }
+  ],
+  "SessionEnd": [
+    {
+      "type": "command",
+      "command": "${keel:keel.hooks.dir}/on-session-end.sh"
+    }
   ]
 }
