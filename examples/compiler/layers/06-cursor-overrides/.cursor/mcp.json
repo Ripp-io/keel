@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "claude-native-server": {
+      "command": "override-claude-native-attempt"
+    },
+    "cursor-override-server": {
+      "command": "cursor-override-mcp",
+      "args": ["--new"]
+    }
+  }
+}

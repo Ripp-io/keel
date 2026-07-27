@@ -94,9 +94,9 @@ auto-save-list/
 # AI Coding Tools
 # ============================================================
 
-# Claude Code / Cursor (compiled output — managed by Keel)
-.claude/
-.cursor/
+# Claude Code / Cursor (compiled output — managed by Keel, root only)
+/.claude/
+/.cursor/
 
 # Aider
 .aider*

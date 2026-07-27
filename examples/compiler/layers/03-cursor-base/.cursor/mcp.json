@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "cursor-native-server": {
+      "_keel": { "force": true },
+      "command": "cursor-native-mcp",
+      "args": ["--mode", "native"]
+    },
+    "shared-mcp-server": {
+      "command": "shared-mcp-from-cursor"
+    }
+  }
+}

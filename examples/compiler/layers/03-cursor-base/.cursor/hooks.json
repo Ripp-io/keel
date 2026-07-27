@@ -1,0 +1,15 @@
+{
+  "sessionStart": [{"type": "command", "command": "echo cursor-base-session"}],
+  "preToolUse": [{"type": "command", "command": "echo cursor-base-pre-tool"}],
+  "postToolUse": [{"type": "command", "command": "echo cursor-base-post-tool"}],
+  "beforeSubmitPrompt": [{"type": "command", "command": "echo cursor-base-prompt"}],
+  "stop": [{"type": "command", "command": "echo cursor-base-stop"}],
+  "subagentStart": [{"type": "command", "command": "echo cursor-base-subagent", "force": true}],
+  "subagentStop": [{"type": "command", "command": "echo cursor-base-subagent-stop"}],
+  "sessionEnd": [{"type": "command", "command": "echo cursor-base-session-end"}],
+  "preCompact": [{"type": "command", "command": "echo cursor-base-pre-compact"}],
+  "beforeShellExecution": [{"type": "command", "command": "echo cursor-only-before-shell"}],
+  "afterShellExecution": [{"type": "command", "command": "echo cursor-only-after-shell"}],
+  "afterFileEdit": [{"type": "command", "command": "echo cursor-only-after-edit"}],
+  "beforeReadFile": [{"type": "command", "command": "echo cursor-only-before-read"}]
+}

@@ -1,0 +1,5 @@
+{
+  "subagentStart": [{"type": "command", "command": "echo cursor-override-subagent-attempt"}],
+  "afterAgentResponse": [{"type": "command", "command": "echo cursor-override-agent-response"}],
+  "afterAgentThought": [{"type": "command", "command": "echo cursor-override-agent-thought"}]
+}

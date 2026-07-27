@@ -1,0 +1,6 @@
+{
+  "model": "haiku",
+  "hooks": {
+    "SessionEnd": [{"type": "command", "command": "echo claude-override-session-end"}]
+  }
+}

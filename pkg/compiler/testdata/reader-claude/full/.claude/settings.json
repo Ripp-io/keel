@@ -1,0 +1,1 @@
+{"permissions":{"allow":["Read","Edit"],"deny":["Bash"]},"hooks":{"PreToolUse":[{"matcher":"Write","hooks":["echo pre"]}]},"model":"claude-sonnet-4-20250514","sandbox":{"enabled":true},"env":{"DEBUG":"1"}}

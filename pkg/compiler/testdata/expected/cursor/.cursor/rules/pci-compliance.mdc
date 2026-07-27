@@ -1,0 +1,7 @@
+---
+description: "PCI-DSS compliance rules for payments code"
+globs: "**/*.{ts,js,java}"
+alwaysApply: true
+---
+Ensure all payment data handling follows PCI-DSS requirements.
+Never log credit card numbers or CVVs.

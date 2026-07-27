@@ -1,0 +1,2 @@
+# Security Skill
+Check vulnerabilities.

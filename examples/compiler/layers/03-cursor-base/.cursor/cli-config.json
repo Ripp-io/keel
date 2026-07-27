@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "model": "claude-sonnet",
+  "permissions.allow": ["Read(*)", "Edit(*)"],
+  "permissions.deny": ["Bash(rm *)"],
+  "editor.vimMode": false
+}

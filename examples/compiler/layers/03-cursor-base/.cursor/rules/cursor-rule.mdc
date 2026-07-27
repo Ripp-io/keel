@@ -1,0 +1,7 @@
+---
+description: Cursor-specific Python conventions
+alwaysApply: true
+globs: ["**/*.py"]
+---
+Follow PEP 8 for all Python code.
+Use type hints for all function signatures.

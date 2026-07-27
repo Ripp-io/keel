@@ -1,0 +1,8 @@
+{
+  "preToolUse": [
+    {"matcher": "Write(**/secrets/**)", "action": "deny"}
+  ],
+  "postToolUse": [
+    {"matcher": "Write(**)", "action": "log"}
+  ]
+}

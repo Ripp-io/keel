@@ -1,0 +1,1 @@
+{"version":1,"permissions.allow":["Read(*)","Edit(*)","Bash(git:*)"],"permissions.deny":["Bash(rm:*)"],"model":"gpt-4o","editor.vimMode":true}

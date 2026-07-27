@@ -1,0 +1,40 @@
+{
+  "mcpServers": {
+    "gitlab": {
+      "args": [
+        "@anthropic-ai/claude-code-gitlab-mcp"
+      ],
+      "command": "npx",
+      "env": {
+        "GITLAB_TOKEN": "${GITLAB_TOKEN}"
+      }
+    },
+    "jira": {
+      "args": [
+        "jira-mcp-server"
+      ],
+      "command": "npx",
+      "env": {
+        "JIRA_TOKEN": "${JIRA_TOKEN}"
+      }
+    },
+    "obsidian": {
+      "args": [
+        "obsidian-mcp-server"
+      ],
+      "command": "npx",
+      "env": {
+        "OBSIDIAN_VAULT": "${OBSIDIAN_VAULT}"
+      }
+    },
+    "sonarqube": {
+      "args": [
+        "sonarqube-mcp-server"
+      ],
+      "command": "npx",
+      "env": {
+        "SONAR_TOKEN": "${SONAR_TOKEN}"
+      }
+    }
+  }
+}
