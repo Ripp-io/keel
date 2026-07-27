@@ -212,6 +212,7 @@ const (
 	varKeelLayersCount = "keel.layers.count"
 	varKeelVersion     = "keel.version"
 	varKeelState       = "keel.state"
+	varKeelHooksDir    = "keel.hooks.dir"
 )
 
 // varKeelDepsPrefix is the namespace prefix for per-dependency path variables

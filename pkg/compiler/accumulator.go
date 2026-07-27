@@ -166,7 +166,8 @@ func NewAccumulationState(foldConfig FoldConfig, opts CompileOptions, absOutputD
 func isAutoVar(k string) bool {
 	switch k {
 	case varKeelAgent, varKeelScope, varKeelBinProject, varKeelBinGlobal,
-		varKeelOutput, varKeelName, varKeelLayersCount, varKeelVersion, varKeelState:
+		varKeelOutput, varKeelName, varKeelLayersCount, varKeelVersion, varKeelState,
+		varKeelHooksDir:
 		return true
 	}
 	return strings.HasPrefix(k, varKeelDepsPrefix)
@@ -315,6 +316,11 @@ func (s *AccumulationState) Fold(ir *LayerIR, layerLabel string) error {
 	// 11. Hooks: check force-lock, strip force fields, collect contributions.
 	//     All contributions are collected. Filtering based on settings force-lock
 	//     happens post-accumulation in ApplyHooksSettingsLock.
+	//     When a layer declares hooks, inject keel.hooks.dir to the hooks directory.
+	if ir.HooksDir != "" && len(ir.Hooks) > 0 {
+		// Last-writer-wins: if multiple layers declare hooks, the last one sets keel.hooks.dir.
+		s.variables[varKeelHooksDir] = ir.HooksDir
+	}
 	for eventName, entries := range ir.Hooks {
 		if locked, _ := s.force.isLocked("hook", eventName); locked {
 			s.recordConflict("hook", eventName, layerLabel)

@@ -115,6 +115,10 @@ type LayerIR struct {
 	// LayerPath is the absolute path to the layer directory.
 	LayerPath string `yaml:"layer_path"`
 
+	// HooksDir is the absolute path to the directory containing hook source files.
+	// Set when hooks are loaded from this layer. Used to inject keel.hooks.dir variable.
+	HooksDir string `yaml:"hooks_dir,omitempty"`
+
 	// DSLConfig is the raw parsed keel.yml, retained for capability
 	// warnings during accumulation. Only set for DSL layers.
 	// Not serialized — preserved separately in Clone().

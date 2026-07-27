@@ -272,6 +272,11 @@ func (r *KeelDSLReader) readHooks(layerPath string, cfg *schema.KeelConfig, ir *
 
 	if len(merged) > 0 {
 		ir.Hooks = merged
+		// Set HooksDir to the directory of the first hook file for keel.hooks.dir variable.
+		// This allows hook commands to reference scripts in the same directory portably.
+		if len(hookFiles) > 0 {
+			ir.HooksDir = filepath.Dir(hookFiles[0].path)
+		}
 	}
 }
 
