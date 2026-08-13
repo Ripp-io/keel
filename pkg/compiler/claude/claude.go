@@ -7,6 +7,7 @@ package claude
 import (
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/compiler"
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/config"
+	"gitlab.com/ripp.io/oss/agentic/keel/pkg/merge"
 )
 
 func init() {
@@ -85,9 +86,17 @@ func ProjectProfile() compiler.AgentProfile {
 		ConfigOutputs: []compiler.ConfigBlockDef{},
 		Capabilities:  caps,
 		SettingsAssembler: func(settings map[string]any, result *compiler.AccumulatedResult) {
-			// Permissions: nested format
+			// Permissions: nested format.
+			// Deep-merge with any permissions already in settings from AgentSpecific
+			// (set by AssembleAgentOutput step 3). Agent-specific permissions (e.g.,
+			// from settings.claude.json) are higher priority and win on conflict.
 			if len(result.Content.Permissions) > 0 {
-				settings["permissions"] = result.Content.Permissions
+				if existing, ok := settings["permissions"].(map[string]any); ok {
+					settings["permissions"] = merge.DeepMergeMapsWithPolicies(
+						result.Content.Permissions, existing, nil)
+				} else {
+					settings["permissions"] = result.Content.Permissions
+				}
 			}
 
 			// Hooks: embedded in settings (Claude stores hooks in settings.json)

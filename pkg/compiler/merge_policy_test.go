@@ -247,3 +247,71 @@ permissions:
 		t.Logf("PermissionsPolicy found: %+v (this means _keel.merge in JSON is now honored)", result.Governance.Record.PermissionsPolicy)
 	}
 }
+
+// TestMergePolicy_PermissionsFromAgentSettingsFile verifies that permissions
+// in an agent-specific settings file (settings.claude.json) are properly
+// deep-merged with permissions from other layers. This is a regression test
+// for a bug where permissions.deny in settings.claude.json was silently
+// dropped because it went through AgentSpecific instead of the Permissions
+// accumulation path.
+func TestMergePolicy_PermissionsFromAgentSettingsFile(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+
+	// Native Claude layer (simulates an implicit layer with allow)
+	nativeLayer := filepath.Join(tempDir, "native")
+	require.NoError(t, os.MkdirAll(filepath.Join(nativeLayer, ".claude"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(nativeLayer, ".claude", "settings.json"), []byte(`{
+  "permissions": {
+    "allow": ["mcp__pencil"]
+  }
+}`), 0644))
+
+	// DSL layer with permissions.deny in settings.claude.json
+	dslLayer := filepath.Join(tempDir, "keel-layer")
+	require.NoError(t, os.MkdirAll(dslLayer, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(dslLayer, "keel.yml"), []byte(`
+schema: v1
+name: test-layer
+settings:
+  claude: settings.claude.json
+`), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dslLayer, "settings.claude.json"), []byte(`{
+  "permissions": {
+    "deny": ["Read(./.keel/state/**)"]
+  }
+}`), 0644))
+
+	outputDir := filepath.Join(tempDir, "output")
+	require.NoError(t, os.MkdirAll(outputDir, 0755))
+
+	// Native layer first (lower priority), DSL layer second (higher priority)
+	_, err := Compile("claude", []config.Layer{
+		{Path: nativeLayer, Format: "claude"},
+		{Path: dslLayer, Format: config.FormatKeel},
+	}, outputDir, CompileOptions{})
+	require.NoError(t, err)
+
+	// Read the compiled settings.json
+	settingsPath := filepath.Join(outputDir, ".claude", "settings.json")
+	settingsData, err := os.ReadFile(settingsPath)
+	require.NoError(t, err, "reading settings.json")
+
+	var settings map[string]any
+	require.NoError(t, json.Unmarshal(settingsData, &settings))
+
+	perms, ok := settings["permissions"].(map[string]any)
+	require.True(t, ok, "expected permissions to be a map")
+
+	// Both allow and deny should be present (deep-merged from different layers)
+	allow, ok := perms["allow"].([]any)
+	require.True(t, ok, "expected allow to be an array")
+	assert.Equal(t, 1, len(allow))
+	assert.Equal(t, "mcp__pencil", allow[0])
+
+	deny, ok := perms["deny"].([]any)
+	require.True(t, ok, "expected deny to be an array — deny was silently dropped before fix")
+	assert.Equal(t, 1, len(deny))
+	assert.Equal(t, "Read(./.keel/state/**)", deny[0])
+}
