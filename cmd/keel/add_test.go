@@ -23,7 +23,7 @@ func TestAdd_CreatesConfigWhenMissing(t *testing.T) {
 	createMinimalLayer(t, layerDir, "test-layer")
 
 	var stdout bytes.Buffer
-	err = runAdd(&stdout, dir,layerDir, true, nil) // noCompile=true to skip compilation for this test
+	err = runAdd(&stdout, dir, layerDir, true, nil, "") // noCompile=true to skip compilation for this test
 	require.NoError(t, err)
 
 	// Verify .keel/config.yml was created
@@ -52,7 +52,7 @@ func TestAdd_NoAgentDirCreatesConfigWithoutOutput(t *testing.T) {
 	dir := t.TempDir()
 
 	var stdout bytes.Buffer
-	err := runAdd(&stdout, dir,"./some-layer", false, nil)
+	err := runAdd(&stdout, dir, "./some-layer", false, nil, "")
 	require.NoError(t, err)
 
 	// Verify config was created with layers but no output
@@ -94,7 +94,7 @@ layers:
 	require.NoError(t, err)
 
 	var stdout bytes.Buffer
-	err = runAdd(&stdout, dir,"./layer2", true, nil) // noCompile=true
+	err = runAdd(&stdout, dir, "./layer2", true, nil, "") // noCompile=true
 	require.NoError(t, err)
 
 	// Verify layer was added
@@ -133,7 +133,7 @@ layers:
 	require.NoError(t, err)
 
 	var stdout bytes.Buffer
-	err = runAdd(&stdout, dir,"./layer1", true, nil) // Add same layer again
+	err = runAdd(&stdout, dir, "./layer1", true, nil, "") // Add same layer again
 	require.NoError(t, err)
 
 	// Verify no error and only one entry
@@ -173,7 +173,7 @@ layers:
 	require.NoError(t, err)
 
 	var stdout bytes.Buffer
-	err = runAdd(&stdout, dir,"./layer2", true, nil)
+	err = runAdd(&stdout, dir, "./layer2", true, nil, "")
 	require.NoError(t, err)
 
 	// Verify both outputs and both layers are present
@@ -203,7 +203,7 @@ func TestAdd_NoCompileFlag(t *testing.T) {
 	createMinimalLayer(t, layerDir, "test-layer")
 
 	var stdout bytes.Buffer
-	err = runAdd(&stdout, dir,layerDir, true, nil) // noCompile=true
+	err = runAdd(&stdout, dir, layerDir, true, nil, "") // noCompile=true
 	require.NoError(t, err)
 
 	// Verify config was created
@@ -234,7 +234,7 @@ func TestAdd_AutoCompiles(t *testing.T) {
 	createMinimalLayer(t, layerDir, "test-layer")
 
 	var stdout bytes.Buffer
-	err = runAdd(&stdout, dir,layerDir, false, nil) // noCompile=false (auto-compile)
+	err = runAdd(&stdout, dir, layerDir, false, nil, "") // noCompile=false (auto-compile)
 	require.NoError(t, err)
 
 	// Verify config was created
@@ -269,7 +269,7 @@ func TestAdd_CreatesKeelDir(t *testing.T) {
 	require.True(t, os.IsNotExist(err))
 
 	var stdout bytes.Buffer
-	err = runAdd(&stdout, dir,layerDir, true, nil)
+	err = runAdd(&stdout, dir, layerDir, true, nil, "")
 	require.NoError(t, err)
 
 	// Verify .keel was created
@@ -281,7 +281,7 @@ func TestAdd_OutputFlagNewConfig(t *testing.T) {
 	dir := t.TempDir()
 
 	var stdout bytes.Buffer
-	err := runAdd(&stdout, dir, "./some-layer", true, map[string]string{"claude": "."})
+	err := runAdd(&stdout, dir, "./some-layer", true, map[string]string{"claude": "."}, "")
 	require.NoError(t, err)
 
 	configPath := filepath.Join(dir, ".keel", "config.yml")
@@ -317,7 +317,7 @@ layers:
 	require.NoError(t, err)
 
 	var stdout bytes.Buffer
-	err = runAdd(&stdout, dir, "./layer2", true, map[string]string{"cursor": "."})
+	err = runAdd(&stdout, dir, "./layer2", true, map[string]string{"cursor": "."}, "")
 	require.NoError(t, err)
 
 	data, err := os.ReadFile(configPath)
@@ -334,6 +334,40 @@ layers:
 	assert.Equal(t, []string{"./layer1", "./layer2"}, cfg.Layers)
 }
 
+func TestAdd_UserScopeWritesToDir(t *testing.T) {
+	// Use a temp dir to simulate the home directory.
+	// The cobra command resolves os.UserHomeDir() → dir;
+	// runAdd takes dir directly, so we test the core logic here.
+	dir := t.TempDir()
+
+	// Create .claude directory so output detection works
+	err := os.MkdirAll(filepath.Join(dir, ".claude"), 0o755)
+	require.NoError(t, err)
+
+	var stdout bytes.Buffer
+	err = runAdd(&stdout, dir, "./my-layer", true, nil, "user")
+	require.NoError(t, err)
+
+	// Verify config was written inside the "home" directory
+	configPath := filepath.Join(dir, ".keel", "config.yml")
+	data, err := os.ReadFile(configPath)
+	require.NoError(t, err)
+
+	var cfg struct {
+		Output map[string]string `yaml:"output"`
+		Layers []string          `yaml:"layers"`
+	}
+	err = yaml.Unmarshal(data, &cfg)
+	require.NoError(t, err)
+
+	assert.Equal(t, map[string]string{"claude": dir}, cfg.Output)
+	assert.Equal(t, []string{"./my-layer"}, cfg.Layers)
+
+	output := stdout.String()
+	assert.Contains(t, output, "Created")
+	assert.Contains(t, output, "config.yml")
+}
+
 func TestAdd_CobraCommand(t *testing.T) {
 	cmd := newAddCmd()
 
@@ -345,6 +379,11 @@ func TestAdd_CobraCommand(t *testing.T) {
 	flag := cmd.Flags().Lookup("no-compile")
 	require.NotNil(t, flag)
 	assert.Equal(t, "bool", flag.Value.Type())
+
+	// Verify --scope flag exists
+	scopeFlag := cmd.Flags().Lookup("scope")
+	require.NotNil(t, scopeFlag)
+	assert.Equal(t, "string", scopeFlag.Value.Type())
 }
 
 // createMinimalLayer creates a minimal valid layer for testing compilation.

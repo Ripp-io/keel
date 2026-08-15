@@ -20,6 +20,7 @@ import (
 func newAddCmd() *cobra.Command {
 	var noCompile bool
 	var outputTargets map[string]string
+	var scope string
 
 	cmd := &cobra.Command{
 		Use:   "add <layer>",
@@ -29,6 +30,10 @@ func newAddCmd() *cobra.Command {
 If no config file exists, one is created with auto-detected output targets.
 The layer is appended as the last entry (highest priority before .keel/local).
 
+Use --scope user to add a layer to your user-level config (~/.keel/config.yml)
+instead of the project-level config. Output targets are auto-detected from your
+home directory (e.g. ~/.claude/ → claude=~).
+
 Use --output to set output targets (creates them if missing, merges with existing):
   keel add ./my-layer --output claude=.
   keel add ./my-layer --output claude=. --output cursor=.
@@ -36,14 +41,29 @@ Use --output to set output targets (creates them if missing, merges with existin
 Examples:
   keel add ./layers/team-standards
   keel add 'https://git.example.com/org/policy.git#main:keel'
-  keel add ./my-layer --no-compile`,
+  keel add ./my-layer --no-compile
+  keel add --scope user ./layers/my-agent-config`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runAdd(cmd.OutOrStdout(), ".", args[0], noCompile, outputTargets)
+			if scope != "" && scope != "project" && scope != "user" {
+				return fmt.Errorf("invalid --scope %q: must be \"project\" or \"user\"", scope)
+			}
+
+			dir := "."
+			if scope == "user" {
+				home, err := os.UserHomeDir()
+				if err != nil {
+					return fmt.Errorf("resolving home directory: %w", err)
+				}
+				dir = home
+			}
+
+			return runAdd(cmd.OutOrStdout(), dir, args[0], noCompile, outputTargets, scope)
 		},
 	}
 
 	cmd.Flags().BoolVar(&noCompile, "no-compile", false, "Add layer without auto-compiling")
+	cmd.Flags().StringVar(&scope, "scope", "", "Scope: project (default) or user (writes to ~/.keel/config.yml)")
 	cmd.Flags().StringToStringVar(&outputTargets, "output", nil, "Agent output targets as agent=path (e.g. claude=.)")
 	if f := cmd.Flags().Lookup("output"); f != nil {
 		f.DefValue = ""
@@ -51,7 +71,7 @@ Examples:
 	return cmd
 }
 
-func runAdd(w io.Writer, dir string, layerSource string, noCompile bool, extraOutputs map[string]string) error {
+func runAdd(w io.Writer, dir string, layerSource string, noCompile bool, extraOutputs map[string]string, scope string) error {
 	keelDir := filepath.Join(dir, ".keel")
 	configPath := filepath.Join(keelDir, "config.yml")
 
@@ -121,6 +141,12 @@ func runAdd(w io.Writer, dir string, layerSource string, noCompile bool, extraOu
 		cfg, err := config.LoadConfigFile(configPath)
 		if err != nil {
 			return fmt.Errorf("loading config for compilation: %w", err)
+		}
+
+		// Propagate scope so compilation applies scope-aware behavior
+		// (e.g. skipping .keel/local at user scope).
+		if scope != "" {
+			cfg.Scope = scope
 		}
 
 		cfg.ApplyDefaults()

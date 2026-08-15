@@ -36,6 +36,7 @@ type CompileConfig struct {
 	Sign          bool              `yaml:"sign"              flag:"sign"              usage:"Sign the compiled manifest with Ed25519 key"`
 	SignKey       string            `yaml:"sign-key"          flag:"sign-key"          usage:"Key name for signing (default: default)"`
 	VerifyLayers  bool              `yaml:"verify-layers"     flag:"verify-layers"     usage:"Require and verify layer signatures before compiling"`
+	IncludeLocal  bool              `yaml:"include-local"     flag:"include-local"     usage:"Include .keel/local layer even at user scope (normally skipped)"`
 }
 
 // RegisterFlags uses reflection to iterate over CompileConfig fields and register
@@ -193,9 +194,14 @@ func (cfg *CompileConfig) NormalizeLayers() []LayerEntry {
 		entries = append(entries, cfg.LayerEntries...)
 	}
 
-	localLayer := filepath.Join(".keel", "local")
-	if info, err := os.Stat(localLayer); err == nil && info.IsDir() {
-		entries = append(entries, LayerEntry{Source: localLayer})
+	// Skip .keel/local at user scope — local overrides are project-specific
+	// and don't belong in user-level output. Use --include-local to override.
+	skipLocal := cfg.Scope == "user" && !cfg.IncludeLocal
+	if !skipLocal {
+		localLayer := filepath.Join(".keel", "local")
+		if info, err := os.Stat(localLayer); err == nil && info.IsDir() {
+			entries = append(entries, LayerEntry{Source: localLayer})
+		}
 	}
 
 	return entries

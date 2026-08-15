@@ -76,10 +76,21 @@ Use --summary to print the compilation report after writing output (auto-enabled
 Use --config <path> to load compilation parameters from a YAML file.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Auto-discover config file when --config is not set.
+			// For --scope user, check ~/.keel/config.yml first.
 			if configFile == "" {
-				candidate := filepath.Join(".keel", "config.yml")
-				if _, err := os.Stat(candidate); err == nil {
-					configFile = candidate
+				if cfg.Scope == "user" {
+					if home, err := os.UserHomeDir(); err == nil {
+						candidate := filepath.Join(home, ".keel", "config.yml")
+						if _, err := os.Stat(candidate); err == nil {
+							configFile = candidate
+						}
+					}
+				}
+				if configFile == "" {
+					candidate := filepath.Join(".keel", "config.yml")
+					if _, err := os.Stat(candidate); err == nil {
+						configFile = candidate
+					}
 				}
 			}
 

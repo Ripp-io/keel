@@ -361,6 +361,51 @@ func TestNormalizeLayers_LocalLayerAppendedToConfig(t *testing.T) {
 	assert.Equal(t, filepath.Join(".keel", "local"), entries[1].Source)
 }
 
+func TestNormalizeLayers_UserScopeSkipsLocal(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".keel", "local"), 0755))
+	t.Chdir(dir)
+
+	entries := (&CompileConfig{
+		Layers: []string{"/some/layer"},
+		Scope:  "user",
+	}).NormalizeLayers()
+
+	require.Len(t, entries, 1)
+	assert.Equal(t, "/some/layer", entries[0].Source)
+}
+
+func TestNormalizeLayers_UserScopeIncludeLocalOverride(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".keel", "local"), 0755))
+	t.Chdir(dir)
+
+	entries := (&CompileConfig{
+		Layers:       []string{"/some/layer"},
+		Scope:        "user",
+		IncludeLocal: true,
+	}).NormalizeLayers()
+
+	require.Len(t, entries, 2)
+	assert.Equal(t, "/some/layer", entries[0].Source)
+	assert.Equal(t, filepath.Join(".keel", "local"), entries[1].Source)
+}
+
+func TestNormalizeLayers_ProjectScopeIncludesLocal(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".keel", "local"), 0755))
+	t.Chdir(dir)
+
+	// Default scope (empty string = project) still includes .keel/local.
+	entries := (&CompileConfig{
+		Layers: []string{"/some/layer"},
+	}).NormalizeLayers()
+
+	require.Len(t, entries, 2)
+	assert.Equal(t, "/some/layer", entries[0].Source)
+	assert.Equal(t, filepath.Join(".keel", "local"), entries[1].Source)
+}
+
 func TestApplyDefaults_NoLocalLayer(t *testing.T) {
 	t.Setenv("CONFIG_LAYERS", "")
 	t.Setenv("USER_CONFIG", "")

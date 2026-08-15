@@ -44,6 +44,7 @@ The layer is appended as the last entry (highest priority before `.keel/local`).
 |------|------|---------|-------------|
 | `--no-compile` | `bool` | `false` | Add layer without auto-compiling |
 | `--output` | `agent=path` | auto-detected | Agent output targets (repeatable) |
+| `--scope` | `string` | `project` | Scope: `project` or `user` (user writes to `~/.keel/config.yml`) |
 
 ### Examples
 
@@ -71,6 +72,12 @@ Add without compiling:
 keel add ./my-layer --no-compile
 ```
 
+Add a layer to your user-level config:
+
+```bash
+keel add --scope user ./my-tools
+```
+
 ### Behavior
 
 **New project** (no `.keel/config.yml`):
@@ -79,6 +86,11 @@ Creates `.keel/config.yml`, auto-detects output targets from existing agent dire
 **Existing project** (`.keel/config.yml` exists):
 Appends the layer to the config, merges any `--output` targets, and recompiles.
 If the layer is already present, prints a message and skips.
+
+**User scope** (`--scope user`):
+Operates on `~/.keel/config.yml` instead of the project-level config.
+Output targets are auto-detected from agent directories in your home directory (e.g. `~/.claude/`).
+Auto-compilation uses user scope, which skips `.keel/local` (project-local overrides don't belong in user-level output).
 
 ---
 
@@ -148,6 +160,7 @@ keel compile
 ```
 
 Keel auto-discovers `.keel/config.yml` and compiles all matched layers for every listed agent.
+With `--scope user`, Keel checks `~/.keel/config.yml` first, falling back to the project-level config.
 
 A full config file with all options:
 
@@ -186,6 +199,7 @@ keel compile -v environment=production
 | `--user-config` | `string` | `/mnt/user-config` | User config directory |
 | `--user-priority` | `string` | `high` | User config priority: `high` or `low` |
 | `--scope` | `string` | `project` | Compilation scope: `project` or `user` |
+| `--include-local` | `bool` | `false` | Include `.keel/local` layer even at user scope (normally skipped) |
 | `--offline` | `bool` | `false` | Use cached remote layers without network |
 | `--locked` | `bool` | `false` | Verify layer content matches lockfile |
 | `--package` | `string` | — | Archive compiled output: `tar.gz` or `zip` |

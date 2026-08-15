@@ -14,6 +14,19 @@ You have your own commands and snippets.
 A colleague maintains an optional internal tools layer.
 You also want to pull in a community config repo.
 
+The fastest setup is `keel add --scope user`:
+
+```bash
+keel add --scope user ./my-tools
+keel add --scope user 'https://git.internal.com/platform/keel-extras.git#main'
+keel add --scope user 'https://github.com/affaan-m/everything-claude-code.git#main'
+```
+
+Each command adds the layer to `~/.keel/config.yml` and recompiles.
+Output targets are auto-detected from your home directory (e.g. `~/.claude/`).
+
+Or compile directly with explicit flags:
+
 ```bash
 keel compile \
   --layer 'https://github.com/affaan-m/everything-claude-code.git#main' \
