@@ -181,7 +181,8 @@ func envOrDefault(key, fallback string) string {
 // NormalizeLayers merges CLI layer flags, config file layer entries, and
 // the .keel/local override into a single ordered []LayerEntry slice.
 // CLI flags take precedence — if --layer was set, config file LayerEntries
-// are ignored. The .keel/local layer is always appended last when present.
+// are ignored. The .keel/local layer is appended last when present, but
+// skipped at user scope (use IncludeLocal to override).
 func (cfg *CompileConfig) NormalizeLayers() []LayerEntry {
 	var entries []LayerEntry
 

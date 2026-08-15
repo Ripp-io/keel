@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"gitlab.com/ripp.io/oss/agentic/keel/pkg/compiler"
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/config"
 	// Import agent packages for side effects (registry registration)
 	_ "gitlab.com/ripp.io/oss/agentic/keel/pkg/compiler/agentsmd"
@@ -45,8 +46,11 @@ Examples:
   keel add --scope user ./layers/my-agent-config`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if scope != "" && scope != "project" && scope != "user" {
-				return fmt.Errorf("invalid --scope %q: must be \"project\" or \"user\"", scope)
+			if scope != "" {
+				s := compiler.Scope(scope)
+				if s != compiler.ScopeProject && s != compiler.ScopeUser {
+					return fmt.Errorf("invalid --scope %q: must be \"project\" or \"user\"", scope)
+				}
 			}
 
 			dir := "."
