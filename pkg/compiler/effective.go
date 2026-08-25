@@ -104,7 +104,7 @@ func buildEffectiveStateCommon(
 // extractPermissions extracts and sorts allow/deny permission lists.
 // Returns nil if no permissions are set.
 func extractPermissions(perms map[string]any) *manifest.EffectivePermissions {
-	if perms == nil || len(perms) == 0 {
+	if len(perms) == 0 {
 		return nil
 	}
 
@@ -197,7 +197,7 @@ func extractMCPServers(mcp map[string]any) []manifest.EffectiveMCPServer {
 // extractHooks counts handlers per event and returns a sorted list by event name.
 // Includes events even if they have zero handlers for presence tracking.
 func extractHooks(hooks map[string]any) []manifest.EffectiveHook {
-	if hooks == nil || len(hooks) == 0 {
+	if len(hooks) == 0 {
 		return nil
 	}
 
@@ -240,7 +240,7 @@ func extractInstructions(content string) *manifest.EffectiveInstructions {
 
 // extractCategories counts non-directory files per category and returns a sorted list.
 func extractCategories(cats map[string][]CategoryFile) []manifest.EffectiveCategory {
-	if cats == nil || len(cats) == 0 {
+	if len(cats) == 0 {
 		return nil
 	}
 

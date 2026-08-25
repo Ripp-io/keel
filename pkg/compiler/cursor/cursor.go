@@ -136,12 +136,6 @@ func translatePermissionSlice(permsRaw any) []any {
 			}
 		}
 		return translated
-	case []string:
-		var translated []any
-		for _, s := range perms {
-			translated = append(translated, TranslatePermissionToCursor(s))
-		}
-		return translated
 	default:
 		return nil
 	}

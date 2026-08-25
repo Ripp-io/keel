@@ -92,6 +92,7 @@ func createArchive(srcDir, destPath, format string) error {
 	case "zip":
 		return archive.CreateZip(srcDir, destPath)
 	default:
+		// unreachable: callers validate format via validateArchiveFormat
 		return fmt.Errorf("unsupported package format %q: use tar.gz or zip", format)
 	}
 }

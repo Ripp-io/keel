@@ -154,7 +154,7 @@ func TestWriter_PermissionSuffix_StringSlice(t *testing.T) {
 	result := &compiler.AccumulatedResult{
 		Content: compiler.CompilationContent{
 			Permissions: map[string]any{
-				"allow": []string{"Read", "Bash(git:*)"},
+				"allow": []any{"Read", "Bash(git:*)"},
 			},
 		},
 	}
