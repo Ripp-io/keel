@@ -18,7 +18,7 @@ import (
 // validMCPName matches names containing only alphanumeric characters, hyphens,
 // underscores, and dots. It rejects empty strings and names that start or end
 // with a dot (which could cause hidden-file or extension-stripping issues).
-var validMCPName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
+var validMCPName = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$`)
 
 // sanitizeMCPName validates that an MCP server name is safe for use as a
 // filename component. It rejects path separators, ".." traversal sequences,
