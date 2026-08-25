@@ -135,6 +135,43 @@ func WriteBinFiles(bins []BinFile, outputDir string) ([]manifest.FileRecord, err
 	return records, nil
 }
 
+// WriteHookScripts writes hook script files to .keel/hooks/ under outputDir.
+// Same pattern as WriteBinFiles but in a different output directory.
+func WriteHookScripts(scripts []BinFile, outputDir string) ([]manifest.FileRecord, error) {
+	if len(scripts) == 0 {
+		return nil, nil
+	}
+
+	var records []manifest.FileRecord
+	hooksDir := filepath.Join(outputDir, ".keel", "hooks")
+
+	for _, sf := range scripts {
+		dst := filepath.Join(hooksDir, sf.RelPath)
+		if !pathutil.ContainsPath(hooksDir, dst) {
+			return nil, fmt.Errorf("hook script %q escapes output directory", sf.RelPath)
+		}
+		if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+			return nil, err
+		}
+		mode := sf.Mode
+		if mode == 0 {
+			mode = 0755
+		}
+		if err := os.WriteFile(dst, sf.Content, mode); err != nil {
+			return nil, err
+		}
+
+		outputPath := filepath.Join(".keel", "hooks", sf.RelPath)
+		records = append(records, manifest.FileRecord{
+			Output:   outputPath,
+			Strategy: "overlay",
+			Hash:     manifest.HashContent(sf.Content),
+		})
+	}
+
+	return records, nil
+}
+
 // WriteStateDir creates the .keel/state/ directory with a .gitignore.
 // Shared by both Claude and Cursor writers.
 func WriteStateDir(outputDir string) error {
@@ -239,6 +276,14 @@ func WriteCommonOutput(result *AccumulatedResult, profile AgentProfile, outputDi
 		return nil, err
 	}
 	records = append(records, binRecords...)
+
+	// 3b. Hook scripts — deployed to .keel/hooks/ so hook commands can
+	// reference them portably via ${keel:keel.hooks.dir}.
+	hookRecords, err := WriteHookScripts(result.Content.HookScripts, outputDir)
+	if err != nil {
+		return nil, err
+	}
+	records = append(records, hookRecords...)
 
 	// 4. Content blocks (loop, worktree-include)
 	for _, cb := range profile.ContentOutputs {

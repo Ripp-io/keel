@@ -115,9 +115,10 @@ type LayerIR struct {
 	// LayerPath is the absolute path to the layer directory.
 	LayerPath string `yaml:"layer_path"`
 
-	// HooksDir is the absolute path to the directory containing hook source files.
-	// Set when hooks are loaded from this layer. Used to inject keel.hooks.dir variable.
-	HooksDir string `yaml:"hooks_dir,omitempty"`
+	// HookScripts holds non-JSON files from hook source directories (e.g., .sh scripts).
+	// Deployed to .keel/hooks/ in the output directory so hook commands can reference
+	// them portably via ${keel:keel.hooks.dir}.
+	HookScripts []BinFile `yaml:"hook_scripts,omitempty"`
 
 	// DSLConfig is the raw parsed keel.yml, retained for capability
 	// warnings during accumulation. Only set for DSL layers.
@@ -205,6 +206,7 @@ type CompilationContent struct {
 	ConfigBlocks  map[string]map[string]any // deep-merged config blocks (environment)
 	Categories    map[string][]CategoryFile // per-category files (last-writer-wins per relpath)
 	Bin           []BinFile                 // bin/ overlay files
+	HookScripts   []BinFile                 // hook script files deployed to .keel/hooks/
 	AgentSpecific map[string]map[string]any // agent-only settings, keyed by agent name
 	Attribution   *CanonicalAttribution     // portable attribution config (last-writer-wins)
 	Sandbox       *schema.SandboxConfig     // portable sandbox config (last-writer-wins)

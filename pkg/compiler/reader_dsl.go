@@ -272,12 +272,82 @@ func (r *KeelDSLReader) readHooks(layerPath string, cfg *schema.KeelConfig, ir *
 
 	if len(merged) > 0 {
 		ir.Hooks = merged
-		// Set HooksDir to the directory of the first hook file for keel.hooks.dir variable.
-		// This allows hook commands to reference scripts in the same directory portably.
-		if len(hookFiles) > 0 {
-			ir.HooksDir = filepath.Dir(hookFiles[0].path)
+		// Read non-JSON files (scripts) from hook directories for deployment to .keel/hooks/.
+		// Hook commands reference scripts via ${keel:keel.hooks.dir} — deploying the scripts
+		// alongside the compiled output makes hooks portable across project/user scope.
+		ir.HookScripts = readHookScripts(layerPath, cfg.Hooks)
+	}
+}
+
+// readHookScripts reads non-JSON files from hook source directories.
+// These are typically shell scripts referenced by hook commands via
+// ${keel:keel.hooks.dir}. They get deployed to .keel/hooks/ in the output.
+//
+// Collects scripts from each unique directory referenced by hook FileRefs —
+// whether the ref points to a directory or a file within one.
+func readHookScripts(layerPath string, refs []schema.FileRef) []BinFile {
+	var scripts []BinFile
+	seen := make(map[string]bool)     // track seen script filenames
+	scannedDirs := make(map[string]bool) // track scanned directories
+
+	for _, ref := range refs {
+		if ref.Source == "" {
+			continue
+		}
+		fullPath := filepath.Join(layerPath, ref.Source)
+		if !pathutil.ContainsPath(layerPath, fullPath) {
+			continue
+		}
+
+		// Determine the directory to scan: the path itself if it's a directory,
+		// or its parent if it's a file (e.g., hooks/hooks.json → hooks/).
+		var dir string
+		info, err := os.Stat(fullPath)
+		if err != nil {
+			continue
+		}
+		if info.IsDir() {
+			dir = fullPath
+		} else {
+			dir = filepath.Dir(fullPath)
+		}
+
+		if scannedDirs[dir] {
+			continue
+		}
+		scannedDirs[dir] = true
+
+		entries, readErr := os.ReadDir(dir)
+		if readErr != nil {
+			continue
+		}
+		for _, e := range entries {
+			if e.IsDir() || strings.HasSuffix(e.Name(), ".json") {
+				continue
+			}
+			if seen[e.Name()] {
+				continue
+			}
+			seen[e.Name()] = true
+			filePath := filepath.Join(dir, e.Name())
+			content, fileErr := pathutil.SafeReadFile(filePath)
+			if fileErr != nil {
+				slog.Warn("reading hook script", "path", filePath, "error", fileErr)
+				continue
+			}
+			fi, _ := e.Info()
+			mode := os.FileMode(0755)
+			if fi != nil {
+				mode = fi.Mode()
+			}
+			scripts = append(scripts, BinFile{
+				RelPath: e.Name(),
+				Content: content,
+				Mode:    mode,
+			})
 		}
 	}
+	return scripts
 }
 
 // readPermissions reads permissions JSON files and populates ir.Permissions
