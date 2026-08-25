@@ -8,6 +8,7 @@ import (
 
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/merge"
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/schema"
+	"gitlab.com/ripp.io/oss/agentic/keel/pkg/skills"
 )
 
 const (
@@ -110,7 +111,7 @@ func checkSingleSkillTokens(result *Result, skillPath string, bodyThreshold int)
 	exceeded := false
 
 	// Read SKILL.md or skill.md.
-	data, err := readSkillFile(skillPath)
+	data, err := skills.ReadSkillFile(skillPath)
 	if err != nil {
 		return false // file not found — already reported by validateSkills
 	}
@@ -142,23 +143,6 @@ func checkSingleSkillTokens(result *Result, skillPath string, bodyThreshold int)
 	}
 
 	return exceeded
-}
-
-// readSkillFile reads SKILL.md (preferred) or skill.md from the given directory.
-func readSkillFile(dirPath string) ([]byte, error) {
-	preferred := filepath.Join(dirPath, "SKILL.md")
-	data, err := os.ReadFile(preferred)
-	if err == nil {
-		return data, nil
-	}
-
-	fallback := filepath.Join(dirPath, "skill.md")
-	data, err = os.ReadFile(fallback)
-	if err == nil {
-		return data, nil
-	}
-
-	return nil, fmt.Errorf("neither SKILL.md nor skill.md found")
 }
 
 // stripFrontmatterContent removes frontmatter from markdown content and returns the body.
