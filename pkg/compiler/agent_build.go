@@ -41,7 +41,6 @@ type HookContribution struct {
 // MCPContribution records one layer's contribution to the MCP configuration.
 type MCPContribution struct {
 	Data       map[string]any
-	Policies   map[string]policy.KeelPolicy
 	LayerLabel string
 }
 

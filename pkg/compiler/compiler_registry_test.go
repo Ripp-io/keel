@@ -36,7 +36,7 @@ func TestReaderRegistryMatchesCompilers(t *testing.T) {
 		_, err := GetReader(name)
 		assert.NoError(t, err, "compiler %q is registered but has no reader", name)
 	}
-	for _, name := range readerNames() {
+	for name := range readers {
 		// "keel" is the DSL format reader — it reads keel.yml layers into
 		// IR but does not have a per-agent compiler. The DSL compilation
 		// pipeline is separate from agent-specific compilers.

@@ -41,12 +41,3 @@ func GetReader(agent string) (NativeReader, error) {
 	}
 	return ctor(), nil
 }
-
-// readerNames returns the names of all registered readers.
-func readerNames() []string {
-	names := make([]string, 0, len(readers))
-	for name := range readers {
-		names = append(names, name)
-	}
-	return names
-}
