@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// EvalCondition evaluates condition expressions against a variables map.
+// evalCondition evaluates condition expressions against a variables map.
 //
 // Supported syntax:
 //   - Equality:  keel.agent == 'claude'

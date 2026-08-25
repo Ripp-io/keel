@@ -424,7 +424,7 @@ func diffCategories(compiled, current *EffectiveState) []CategoryDiff {
 }
 
 // diffStringLists compares two string lists and returns added and removed items.
-// Both lists should be pre-sorted.
+// Order-independent comparison using set operations.
 func diffStringLists(compiled, current []string) (added, removed []string) {
 	compiledSet := make(map[string]bool, len(compiled))
 	for _, item := range compiled {

@@ -137,8 +137,7 @@ func (s *AccumulationState) Finalize(externalVars map[string]string) error {
 			instrContent = merge.SubstituteVariables(instrContent, s.variables)
 		}
 
-		// Store as the finalized instruction string. Preserve a single
-		// Preserve a single trailing newline for clean file output.
+		// Store as the finalized instruction string. Preserve a single trailing newline for clean file output.
 		finalInstr := strings.TrimRight(string(instrContent), "\n\r\t ")
 		if finalInstr != "" {
 			finalInstr += "\n"
