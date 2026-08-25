@@ -27,16 +27,6 @@ func KeyID(pub ed25519.PublicKey) string {
 	return "keel:sha256:" + hex.EncodeToString(hash[:])
 }
 
-// Sign signs data with the private key. Returns raw signature bytes.
-func Sign(key ed25519.PrivateKey, data []byte) []byte {
-	return ed25519.Sign(key, data)
-}
-
-// Verify checks a signature against data and public key.
-func Verify(key ed25519.PublicKey, data, sig []byte) bool {
-	return ed25519.Verify(key, data, sig)
-}
-
 // MarshalPrivateKey encodes an Ed25519 private key as PEM (PKCS8).
 func MarshalPrivateKey(key ed25519.PrivateKey) ([]byte, error) {
 	pkcs8, err := x509.MarshalPKCS8PrivateKey(key)

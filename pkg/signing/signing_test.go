@@ -31,22 +31,22 @@ func TestSignAndVerify(t *testing.T) {
 	testData := []byte("test message for signing")
 
 	// Sign the data.
-	signature := Sign(priv, testData)
+	signature := ed25519.Sign(priv, testData)
 	require.NotNil(t, signature)
 	require.NotEmpty(t, signature)
 
 	// Verify with correct data — should succeed.
-	assert.True(t, Verify(pub, testData, signature), "verification should succeed with correct data")
+	assert.True(t, ed25519.Verify(pub, testData, signature), "verification should succeed with correct data")
 
 	// Verify with altered data — should fail.
 	alteredData := []byte("altered message")
-	assert.False(t, Verify(pub, alteredData, signature), "verification should fail with altered data")
+	assert.False(t, ed25519.Verify(pub, alteredData, signature), "verification should fail with altered data")
 
 	// Verify with altered signature — should fail.
 	alteredSig := make([]byte, len(signature))
 	copy(alteredSig, signature)
 	alteredSig[0] ^= 0xFF // Flip bits in first byte.
-	assert.False(t, Verify(pub, testData, alteredSig), "verification should fail with altered signature")
+	assert.False(t, ed25519.Verify(pub, testData, alteredSig), "verification should fail with altered signature")
 }
 
 func TestKeyID_Deterministic(t *testing.T) {
@@ -242,11 +242,11 @@ func TestSignVerify_CrossKeyValidation(t *testing.T) {
 	testData := []byte("test message")
 
 	// Sign with key 1.
-	sig := Sign(priv1, testData)
+	sig := ed25519.Sign(priv1, testData)
 
 	// Verify with correct public key — should succeed.
-	assert.True(t, Verify(pub1, testData, sig))
+	assert.True(t, ed25519.Verify(pub1, testData, sig))
 
 	// Verify with wrong public key — should fail.
-	assert.False(t, Verify(pub2, testData, sig), "signature should not verify with wrong public key")
+	assert.False(t, ed25519.Verify(pub2, testData, sig), "signature should not verify with wrong public key")
 }

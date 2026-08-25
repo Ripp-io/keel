@@ -118,7 +118,7 @@ func TestVerifyManifest_TamperedField(t *testing.T) {
 	if result.Valid {
 		t.Error("expected verification to fail for tampered manifest")
 	}
-	if result.Error != "content hash mismatch: manifest has been modified since signing" {
+	if result.Error != "content hash mismatch: content has been modified since signing" {
 		t.Errorf("Error = %q, want content hash mismatch", result.Error)
 	}
 }

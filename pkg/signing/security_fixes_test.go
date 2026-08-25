@@ -9,66 +9,6 @@ import (
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/manifest"
 )
 
-// TestVerifyContentHash tests the TOCTOU protection mechanism.
-func TestVerifyContentHash(t *testing.T) {
-	// Create a temporary layer.
-	layerDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(layerDir, "keel.yml"), []byte("schema: v1\nname: test\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(layerDir, "instructions.md"), []byte("Test layer"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	// Compute initial hash.
-	hash1, err := manifest.HashLayerDir(layerDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Verification should succeed with matching hash.
-	if err := VerifyContentHash(layerDir, hash1); err != nil {
-		t.Errorf("VerifyContentHash failed with matching hash: %v", err)
-	}
-
-	// Modify the layer content.
-	if err := os.WriteFile(filepath.Join(layerDir, "instructions.md"), []byte("Modified content"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	// Verification should fail with old hash.
-	err = VerifyContentHash(layerDir, hash1)
-	if err == nil {
-		t.Error("VerifyContentHash should have failed after modification")
-	}
-	if err != nil && err.Error() == "" {
-		t.Error("VerifyContentHash error should have a message")
-	}
-}
-
-// TestVerifyContentHash_ErrorMessage tests the TOCTOU error message format.
-func TestVerifyContentHash_ErrorMessage(t *testing.T) {
-	layerDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(layerDir, "keel.yml"), []byte("schema: v1\nname: test\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	// Use a bogus hash.
-	err := VerifyContentHash(layerDir, "sha256:0000000000000000000000000000000000000000000000000000000000000000")
-	if err == nil {
-		t.Fatal("Expected error, got nil")
-	}
-
-	// Check that error message mentions the layer path and contains expected keywords.
-	errMsg := err.Error()
-	if errMsg == "" {
-		t.Error("Error message should not be empty")
-	}
-	// The error should mention "modified after signature verification" based on the implementation.
-	// Just verify we got a useful error.
-	t.Logf("Error message: %s", errMsg)
-}
-
 // TestKeyRevocation tests the key revocation mechanism.
 func TestKeyRevocation(t *testing.T) {
 	ks := &KeyStore{BaseDir: t.TempDir()}

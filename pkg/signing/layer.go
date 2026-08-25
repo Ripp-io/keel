@@ -59,7 +59,7 @@ func SignLayer(layerPath, keyName string, ks *KeyStore) (*LayerSignature, error)
 	keyID := KeyID(pub)
 
 	// Sign the content hash bytes.
-	sig := Sign(priv, []byte(contentHash))
+	sig := ed25519.Sign(priv, []byte(contentHash))
 
 	// Build the signature structure.
 	layerSig := &LayerSignature{
@@ -138,144 +138,14 @@ func VerifyLayerSignature(layerPath string, ks *KeyStore, opts *VerifyOptions) (
 		return nil, fmt.Errorf("hashing layer directory: %w", err)
 	}
 
-	// Parse the signature timestamp.
-	signedAt, err := time.Parse(time.RFC3339, sig.SignedAt)
-	if err != nil {
-		return &VerifyResult{
-			Valid:       false,
-			KeyID:       sig.KeyID,
-			ContentHash: currentHash,
-			SignedAt:    sig.SignedAt,
-			Error:       fmt.Sprintf("invalid signature timestamp: %v", err),
-		}, nil
-	}
-
-	signatureAge := time.Since(signedAt)
-
-	// Check signature age if MaxSignatureAge is set.
-	if opts.MaxSignatureAge > 0 && signatureAge > opts.MaxSignatureAge {
-		return &VerifyResult{
-			Valid:        false,
-			KeyID:        sig.KeyID,
-			ContentHash:  currentHash,
-			SignedAt:     sig.SignedAt,
-			SignatureAge: signatureAge,
-			Error:        fmt.Sprintf("signature expired: signed at %s, maximum age is %s", sig.SignedAt, opts.MaxSignatureAge),
-		}, nil
-	}
-
-	// Verify content hash matches.
-	if currentHash != sig.ContentHash {
-		return &VerifyResult{
-			Valid:        false,
-			KeyID:        sig.KeyID,
-			ContentHash:  currentHash,
-			SignedAt:     sig.SignedAt,
-			SignatureAge: signatureAge,
-			Error:        "content hash mismatch: layer has been modified since signing",
-		}, nil
-	}
-
-	// Decode the signature bytes.
-	sigBytes, err := base64.StdEncoding.DecodeString(sig.Signature)
-	if err != nil {
-		return &VerifyResult{
-			Valid:       false,
-			KeyID:       sig.KeyID,
-			ContentHash: sig.ContentHash,
-			SignedAt:    sig.SignedAt,
-			Error:       fmt.Sprintf("invalid signature encoding: %v", err),
-		}, nil
-	}
-
-	// Check if the key is revoked.
-	revokedKey, err := ks.LoadRevokedKey(sig.KeyID)
-	if err != nil {
-		return nil, fmt.Errorf("checking key revocation: %w", err)
-	}
-
-	var pubKey ed25519.PublicKey
-	var keyName string
-	var warnings []string
-
-	if revokedKey != nil {
-		// Key is revoked — check if signature predates revocation.
-		if signedAt.After(revokedKey.RevokedAt) {
-			// Signature created after revocation — reject.
-			return &VerifyResult{
-				Valid:        false,
-				KeyID:        sig.KeyID,
-				ContentHash:  sig.ContentHash,
-				SignedAt:     sig.SignedAt,
-				SignatureAge: signatureAge,
-				Error:        fmt.Sprintf("signature created after key revocation (signed: %s, revoked: %s)", sig.SignedAt, revokedKey.RevokedAt.Format(time.RFC3339)),
-			}, nil
-		}
-
-		// Signature predates revocation — allow but warn.
-		warnings = append(warnings, fmt.Sprintf("signing key was revoked on %s, but signature predates revocation", revokedKey.RevokedAt.Format(time.RFC3339)))
-
-		// Use the revoked key's public key for verification.
-		pubKey, err = UnmarshalPublicKey(revokedKey.PublicKey)
-		if err != nil {
-			return nil, fmt.Errorf("unmarshaling revoked public key: %w", err)
-		}
-		keyName = revokedKey.Name
-	} else {
-		// Load the public key by ID from active keys.
-		var err error
-		pubKey, keyName, err = ks.LoadPublicKeyByID(sig.KeyID)
-		if err != nil {
-			return &VerifyResult{
-				Valid:        false,
-				KeyID:        sig.KeyID,
-				ContentHash:  sig.ContentHash,
-				SignedAt:     sig.SignedAt,
-				SignatureAge: signatureAge,
-				Error:        fmt.Sprintf("signing key not found in keystore: %s", sig.KeyID),
-			}, nil
-		}
-	}
-
-	// Verify the signature.
-	if !Verify(pubKey, []byte(sig.ContentHash), sigBytes) {
-		return &VerifyResult{
-			Valid:        false,
-			KeyID:        sig.KeyID,
-			KeyName:      keyName,
-			ContentHash:  sig.ContentHash,
-			SignedAt:     sig.SignedAt,
-			SignatureAge: signatureAge,
-			Error:        "signature verification failed",
-		}, nil
-	}
-
-	// Success.
-	return &VerifyResult{
-		Valid:        true,
-		KeyID:        sig.KeyID,
-		KeyName:      keyName,
-		ContentHash:  sig.ContentHash,
-		SignedAt:     sig.SignedAt,
-		SignatureAge: signatureAge,
-		Warnings:     warnings,
-	}, nil
-}
-
-// VerifyContentHash re-verifies that a layer directory matches an expected hash.
-// This is used to detect TOCTOU attacks where the layer is modified between
-// signature verification and compilation.
-func VerifyContentHash(layerPath string, expectedHash string) error {
-	// Re-hash the layer directory.
-	currentHash, err := manifest.HashLayerDir(layerPath)
-	if err != nil {
-		return fmt.Errorf("hashing layer directory: %w", err)
-	}
-
-	// Compare hashes.
-	if currentHash != expectedHash {
-		return fmt.Errorf("layer %q was modified after signature verification - content hash mismatch (expected %s, got %s)", layerPath, expectedHash, currentHash)
-	}
-
-	return nil
+	// Delegate to the shared verification core.
+	return verifySignatureCore(
+		currentHash,
+		sig.KeyID,
+		sig.Signature,
+		sig.SignedAt,
+		sig.ContentHash,
+		ks,
+		opts,
+	)
 }
