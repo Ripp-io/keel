@@ -77,12 +77,14 @@ Use --config <path> to load compilation parameters from a YAML file.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Auto-discover config file when --config is not set.
 			// For --scope user, check ~/.keel/config.yml first.
+			userConfigUsed := false
 			if configFile == "" {
 				if cfg.Scope == "user" {
 					if home, err := os.UserHomeDir(); err == nil {
 						candidate := filepath.Join(home, ".keel", "config.yml")
 						if _, err := os.Stat(candidate); err == nil {
 							configFile = candidate
+							userConfigUsed = true
 						}
 					}
 				}
@@ -101,6 +103,27 @@ Use --config <path> to load compilation parameters from a YAML file.`,
 					return fmt.Errorf("loading config file: %w", err)
 				}
 				mergeConfigFile(cmd, &cfg, fileCfg)
+			}
+
+			// User scope: redirect output to home directory when not explicitly
+			// configured. Project config output paths target the project dir —
+			// user-scope output belongs in ~, same principle as skipping .keel/local/.
+			if cfg.Scope == "user" && !cmd.Flags().Changed("output") && !userConfigUsed {
+				home, err := os.UserHomeDir()
+				if err != nil {
+					return fmt.Errorf("determining home directory for user scope: %w", err)
+				}
+				if len(cfg.Output) > 0 {
+					// Project config specified agents — remap paths to home.
+					for agent := range cfg.Output {
+						cfg.Output[agent] = home
+					}
+				} else {
+					// No output configured — detect at home.
+					if detected := config.DetectOutputTargets(home); len(detected) > 0 {
+						cfg.Output = detected
+					}
+				}
 			}
 
 			cfg.ApplyDefaults()
