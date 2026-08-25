@@ -34,7 +34,7 @@ func TestSafeReadFile_ExceedsMaxSize(t *testing.T) {
 
 	f, err := os.Create(path)
 	require.NoError(t, err)
-	_, err = f.Seek(MaxConfigFileSize, 0)
+	_, err = f.Seek(maxConfigFileSize, 0)
 	require.NoError(t, err)
 	_, err = f.Write([]byte{0})
 	require.NoError(t, err)
@@ -52,14 +52,14 @@ func TestSafeReadFile_ExactlyAtMaxSize(t *testing.T) {
 
 	f, err := os.Create(path)
 	require.NoError(t, err)
-	_, err = f.Seek(MaxConfigFileSize-1, 0)
+	_, err = f.Seek(maxConfigFileSize-1, 0)
 	require.NoError(t, err)
 	_, err = f.Write([]byte{0})
 	require.NoError(t, err)
 	f.Close()
 
 	_, err = SafeReadFile(path)
-	require.NoError(t, err, "SafeReadFile should accept file at exactly MaxConfigFileSize")
+	require.NoError(t, err, "SafeReadFile should accept file at exactly maxConfigFileSize")
 }
 
 func TestSafeReadFile_EmptyFile(t *testing.T) {

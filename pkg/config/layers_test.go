@@ -32,7 +32,7 @@ func stringsToLayerEntries(paths []string) []LayerEntry {
 }
 
 func TestAgentMarkersUnique(t *testing.T) {
-	require.NoError(t, ValidateAgentMarkers())
+	require.NoError(t, validateAgentMarkers())
 }
 
 func TestResolveLayers_SinglePath(t *testing.T) {

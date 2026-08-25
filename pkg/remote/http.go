@@ -4,11 +4,8 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"compress/gzip"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
-	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
@@ -18,6 +15,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"gitlab.com/ripp.io/oss/agentic/keel/pkg/manifest"
 )
 
 // Size and count limits for archive extraction. Exported so that callers
@@ -111,7 +110,7 @@ func checkHTTPCache(src ParsedSource, dirs httpCacheDirs) (string, error) {
 	}
 
 	// Warn if cache is expired in offline mode.
-	if isCacheExpired(meta, DefaultCacheTTL) {
+	if isCacheExpired(meta, defaultCacheTTL) {
 		slog.Warn("using expired cache entry in offline mode", "url", src.RawURL,
 			"age", time.Since(meta.LastFetched).Round(time.Hour))
 	}
@@ -568,62 +567,14 @@ func replaceContent(contentDir, srcDir string) error {
 }
 
 // hashDirectory computes a deterministic SHA-256 hash of a directory's content.
-// Walks the directory recursively in lexical order, hashing relative file paths
-// and their content. Symlinks and .git/ directories are skipped. Uses the same
-// algorithm as manifest.HashLayerDir for consistency.
+// Delegates to manifest.HashLayerDir for consistent hashing across the codebase.
 func hashDirectory(dirPath string) (string, error) {
-	h := sha256.New()
-
-	err := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Skip .git directories entirely.
-		if d.IsDir() && d.Name() == ".git" {
-			return filepath.SkipDir
-		}
-
-		// Skip directories — we only hash files.
-		if d.IsDir() {
-			return nil
-		}
-
-		// Skip symlinks.
-		if d.Type()&fs.ModeSymlink != 0 {
-			return nil
-		}
-
-		relPath, err := filepath.Rel(dirPath, path)
-		if err != nil {
-			return fmt.Errorf("computing relative path for %q: %w", path, err)
-		}
-
-		// Write relative path with null byte delimiters.
-		// Use forward slashes for cross-platform determinism.
-		normalizedPath := filepath.ToSlash(relPath)
-		h.Write([]byte(normalizedPath))
-		h.Write([]byte{0})
-
-		content, err := os.ReadFile(path)
-		if err != nil {
-			return fmt.Errorf("reading %q: %w", path, err)
-		}
-		h.Write(content)
-		h.Write([]byte{0})
-
-		return nil
-	})
-	if err != nil {
-		return "", fmt.Errorf("walking directory %q: %w", dirPath, err)
-	}
-
-	return "sha256:" + hex.EncodeToString(h.Sum(nil)), nil
+	return manifest.HashLayerDir(dirPath)
 }
 
-// DefaultCacheTTL is the default time-to-live for cache entries.
+// defaultCacheTTL is the default time-to-live for cache entries.
 // After TTL expires, a re-fetch is attempted. If offline, stale entries are used with a warning.
-const DefaultCacheTTL = 7 * 24 * time.Hour // 7 days
+const defaultCacheTTL = 7 * 24 * time.Hour // 7 days
 
 // verifyHTTPCacheIntegrity checks the integrity of a cached HTTP layer by comparing
 // the stored content hash against the actual content. If the hash mismatches, logs

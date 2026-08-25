@@ -88,11 +88,11 @@ type AccumulationState struct {
 	installedDeps           []manifest.InstalledDepRecord
 	dslConfigs              []dslConfigEntry         // DSL configs for capability warnings
 	allLayerEntries         []crossFormatLayerEntry  // All non-keel layer IRs for portability warnings
-	hookContributions       []HookContribution       // Hook contributions for agent-specific merge strategy
-	mcpContributions        []MCPContribution        // MCP contributions for deferred filtering
-	settingsContributions   []SettingsContribution   // Settings contributions for governance pass
-	categoryContributions   []CategoryContribution   // Category contributions for governance pass
-	filePolicyContributions []FilePolicyContribution // File policy contributions for governance pass
+	hookContributions       []hookContribution       // Hook contributions for agent-specific merge strategy
+	mcpContributions        []mcpContribution        // MCP contributions for deferred filtering
+	settingsContributions   []settingsContribution   // Settings contributions for governance pass
+	categoryContributions   []categoryContribution   // Category contributions for governance pass
+	filePolicyContributions []filePolicyContribution // File policy contributions for governance pass
 	overrideConflicts       []manifest.OverrideConflict
 	permPolicySetBy         string
 
@@ -305,7 +305,7 @@ func (s *AccumulationState) Fold(ir *LayerIR, layerLabel string) error {
 	// 8, 9, 10. Settings/Permissions/AgentSpecific: collect contributions for governance pass.
 	// Governance (lock checks, conflicts, merging) happens in ApplyGovernance.
 	if len(ir.Settings) > 0 || len(ir.Permissions) > 0 || len(ir.AgentSpecific) > 0 || ir.PermissionsPolicy != nil {
-		s.settingsContributions = append(s.settingsContributions, SettingsContribution{
+		s.settingsContributions = append(s.settingsContributions, settingsContribution{
 			Settings:      ir.Settings,
 			Permissions:   ir.Permissions,
 			AgentSpecific: ir.AgentSpecific,
@@ -344,7 +344,7 @@ func (s *AccumulationState) Fold(ir *LayerIR, layerLabel string) error {
 		// force-locks settings, ALL hook contributions (including from earlier
 		// layers) must be filtered. This requires seeing the complete force-lock
 		// state before deciding which hooks survive.
-		s.hookContributions = append(s.hookContributions, HookContribution{
+		s.hookContributions = append(s.hookContributions, hookContribution{
 			EventName: eventName,
 			Entries:   stripForceFromEntries(entries),
 			LayerLabel: layerLabel,
@@ -357,7 +357,7 @@ func (s *AccumulationState) Fold(ir *LayerIR, layerLabel string) error {
 
 	// 12. Categories: collect contributions for governance pass.
 	for catName, files := range ir.Categories {
-		s.categoryContributions = append(s.categoryContributions, CategoryContribution{
+		s.categoryContributions = append(s.categoryContributions, categoryContribution{
 			CatName:     catName,
 			Files:       files,
 			LayerLabel:  layerLabel,
@@ -371,7 +371,7 @@ func (s *AccumulationState) Fold(ir *LayerIR, layerLabel string) error {
 		if !fp.Force {
 			continue
 		}
-		s.filePolicyContributions = append(s.filePolicyContributions, FilePolicyContribution{
+		s.filePolicyContributions = append(s.filePolicyContributions, filePolicyContribution{
 			FilePath:  filePath,
 			Policy:    fp,
 			LayerLabel: layerLabel,
@@ -409,7 +409,7 @@ func (s *AccumulationState) Fold(ir *LayerIR, layerLabel string) error {
 // so that filtering happens after keel.agent is set.
 func (s *AccumulationState) foldMCP(srcMap map[string]any, layerLabel string) error {
 	// Store the raw data with _keel metadata intact for later filtering
-	s.mcpContributions = append(s.mcpContributions, MCPContribution{
+	s.mcpContributions = append(s.mcpContributions, mcpContribution{
 		Data:   srcMap,
 		LayerLabel: layerLabel,
 	})

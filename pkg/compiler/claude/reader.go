@@ -126,24 +126,10 @@ func (r *Reader) readSettings(layerPath string, ir *compiler.LayerIR) error {
 	return nil
 }
 
-// readMCP reads MCP config, checking .mcp.json, mcp.json at layer root,
-// and .claude/.mcp.json for Claude layers.
+// readMCP reads MCP config, checking .mcp.json and mcp.json at layer root.
 func (r *Reader) readMCP(layerPath string, ir *compiler.LayerIR) error {
-	candidates := []string{
-		filepath.Join(layerPath, ".mcp.json"),
-		filepath.Join(layerPath, "mcp.json"),
-	}
-	raw, err := compiler.ReadJSONConfig(candidates)
-	if err != nil {
-		return err
-	}
-	if raw == nil {
-		return nil
-	}
-
-	slog.Debug("read mcp.json", "keys", len(raw), "layer", layerPath)
-	ir.MCP = raw
-	return nil
+	candidates := []string{".mcp.json", "mcp.json"}
+	return compiler.ReadMCPConfig(layerPath, candidates, ir)
 }
 
 // readOtherDotDirFiles reads arbitrary files from the .claude/ directory

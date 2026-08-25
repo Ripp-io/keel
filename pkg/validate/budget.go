@@ -8,11 +8,12 @@ import (
 
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/merge"
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/schema"
+	"gitlab.com/ripp.io/oss/agentic/keel/pkg/skills"
 )
 
 const (
-	DefaultSkillBodyTokenThreshold = 5000
-	DefaultSkillDescriptionChars   = 1024
+	defaultSkillBodyTokenThreshold = 5000
+	defaultSkillDescriptionChars   = 1024
 )
 
 // estimateTokens returns an estimated token count using the ~4 bytes per token heuristic.
@@ -30,7 +31,7 @@ func estimateTokensFromSize(n int) int {
 // thresholds are exceeded. All findings are warnings, never errors.
 func checkTokenBudget(result *Result, layerPath string, keelExists bool, cfg *schema.KeelConfig) {
 	// Resolve thresholds from config or use defaults.
-	skillBodyThreshold := DefaultSkillBodyTokenThreshold
+	skillBodyThreshold := defaultSkillBodyTokenThreshold
 	instructionsThreshold := 0
 	layerThreshold := 0
 
@@ -110,7 +111,7 @@ func checkSingleSkillTokens(result *Result, skillPath string, bodyThreshold int)
 	exceeded := false
 
 	// Read SKILL.md or skill.md.
-	data, err := readSkillFile(skillPath)
+	data, err := skills.ReadSkillFile(skillPath)
 	if err != nil {
 		return false // file not found — already reported by validateSkills
 	}
@@ -123,8 +124,8 @@ func checkSingleSkillTokens(result *Result, skillPath string, bodyThreshold int)
 
 	// Check description length (discovery tier limit: 1024 chars).
 	if desc, ok := fm["description"].(string); ok {
-		if len(desc) > DefaultSkillDescriptionChars {
-			result.addWarn(fmt.Sprintf("token budget: skill %q description %d chars exceeds discovery tier limit (%d)", dirName, len(desc), DefaultSkillDescriptionChars))
+		if len(desc) > defaultSkillDescriptionChars {
+			result.addWarn(fmt.Sprintf("token budget: skill %q description %d chars exceeds discovery tier limit (%d)", dirName, len(desc), defaultSkillDescriptionChars))
 			exceeded = true
 		}
 	}
@@ -142,23 +143,6 @@ func checkSingleSkillTokens(result *Result, skillPath string, bodyThreshold int)
 	}
 
 	return exceeded
-}
-
-// readSkillFile reads SKILL.md (preferred) or skill.md from the given directory.
-func readSkillFile(dirPath string) ([]byte, error) {
-	preferred := filepath.Join(dirPath, "SKILL.md")
-	data, err := os.ReadFile(preferred)
-	if err == nil {
-		return data, nil
-	}
-
-	fallback := filepath.Join(dirPath, "skill.md")
-	data, err = os.ReadFile(fallback)
-	if err == nil {
-		return data, nil
-	}
-
-	return nil, fmt.Errorf("neither SKILL.md nor skill.md found")
 }
 
 // stripFrontmatterContent removes frontmatter from markdown content and returns the body.

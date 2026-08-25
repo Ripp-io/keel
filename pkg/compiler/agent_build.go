@@ -30,22 +30,22 @@ type crossFormatLayerEntry struct {
 	layerLabel string
 }
 
-// HookContribution records one layer's contribution to the hooks map.
-type HookContribution struct {
+// hookContribution records one layer's contribution to the hooks map.
+type hookContribution struct {
 	EventName string
 	Entries   any
 	LayerLabel string
 	FoldIndex int // Fold index when this contribution was collected
 }
 
-// MCPContribution records one layer's contribution to the MCP configuration.
-type MCPContribution struct {
+// mcpContribution records one layer's contribution to the MCP configuration.
+type mcpContribution struct {
 	Data       map[string]any
 	LayerLabel string
 }
 
-// SettingsContribution records one layer's contribution to settings, permissions, and agent-specific config.
-type SettingsContribution struct {
+// settingsContribution records one layer's contribution to settings, permissions, and agent-specific config.
+type settingsContribution struct {
 	Settings      map[string]any
 	Permissions   map[string]any
 	AgentSpecific map[string]map[string]any
@@ -54,8 +54,8 @@ type SettingsContribution struct {
 	FoldIndex     int
 }
 
-// CategoryContribution records one layer's contribution to a category.
-type CategoryContribution struct {
+// categoryContribution records one layer's contribution to a category.
+type categoryContribution struct {
 	CatName     string
 	Files       []CategoryFile
 	LayerLabel  string
@@ -63,8 +63,8 @@ type CategoryContribution struct {
 	FoldIndex   int
 }
 
-// FilePolicyContribution records one layer's file policy declarations.
-type FilePolicyContribution struct {
+// filePolicyContribution records one layer's file policy declarations.
+type filePolicyContribution struct {
 	FilePath  string
 	Policy    schema.FilePolicy
 	LayerLabel string
@@ -123,7 +123,7 @@ func (s *AccumulationState) ApplyGovernance() {
 		entries = append(entries, governanceEntry{
 			foldIndex: c.FoldIndex,
 			order:     0,
-			apply:     func() { s.applySettingsContribution(c) },
+			apply:     func() { s.applysettingsContribution(c) },
 		})
 	}
 
@@ -186,8 +186,8 @@ func (s *AccumulationState) ApplyGovernance() {
 	}
 }
 
-// applySettingsContribution processes a single settings contribution.
-func (s *AccumulationState) applySettingsContribution(c SettingsContribution) {
+// applysettingsContribution processes a single settings contribution.
+func (s *AccumulationState) applysettingsContribution(c settingsContribution) {
 	// A contribution is blocked if it arrived at or after the fold where
 	// settings was first force-locked.
 	locked := s.settingsForceLockedAt >= 0 && c.FoldIndex >= s.settingsForceLockedAt
@@ -256,7 +256,7 @@ func (s *AccumulationState) ApplyHooksSettingsLock(hooksInSettings bool) {
 	}
 
 	// Keep only contributions from before settings was force-locked
-	var kept []HookContribution
+	var kept []hookContribution
 	for _, c := range s.hookContributions {
 		if c.FoldIndex < s.settingsForceLockedAt {
 			kept = append(kept, c)

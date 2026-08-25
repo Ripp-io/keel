@@ -9,8 +9,8 @@ import (
 //go:embed keel.default.yml
 var DefaultConfigYAML []byte
 
-// ParseDefaults returns the built-in default KeelConfig.
-func ParseDefaults() (*KeelConfig, error) {
+// parseDefaults returns the built-in default KeelConfig.
+func parseDefaults() (*KeelConfig, error) {
 	return ParseBytes(DefaultConfigYAML)
 }
 
@@ -20,7 +20,7 @@ func ParseDefaults() (*KeelConfig, error) {
 // is preserved.
 func MergeWithDefaults(userConfig *KeelConfig) *KeelConfig {
 	if userConfig == nil {
-		defaults, err := ParseDefaults()
+		defaults, err := parseDefaults()
 		if err != nil {
 			slog.Error("failed to parse embedded defaults", "error", err)
 			return &KeelConfig{}
@@ -28,7 +28,7 @@ func MergeWithDefaults(userConfig *KeelConfig) *KeelConfig {
 		return defaults
 	}
 
-	defaults, err := ParseDefaults()
+	defaults, err := parseDefaults()
 	if err != nil {
 		// Defaults are embedded and tested — this should never happen in production.
 		slog.Error("failed to parse embedded defaults, returning user config as-is", "error", err)

@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-// LintWarning describes a non-portable body-level pattern found in a markdown file.
-type LintWarning struct {
+// lintWarning describes a non-portable body-level pattern found in a markdown file.
+type lintWarning struct {
 	File    string // filename where the pattern was found
 	Line    int    // 1-based line number
 	Pattern string // short identifier for the pattern (e.g., "$ARGUMENTS", "{{var}}")
@@ -39,16 +39,16 @@ var bodyPatterns = []bodyPattern{
 	{regexp.MustCompile(`\{\{[^}]+\}\}`), "cursor", "{{var}}", "Cursor-only Maestro template variable"},
 }
 
-// LintBodyPatterns scans markdown content for non-portable body-level patterns.
+// lintBodyPatterns scans markdown content for non-portable body-level patterns.
 // Returns a slice of warnings (never errors). Each warning identifies the pattern
 // found, the line number, and which agent it belongs to.
-func LintBodyPatterns(content []byte, filename string) []LintWarning {
+func lintBodyPatterns(content []byte, filename string) []lintWarning {
 	if len(content) == 0 {
 		return nil
 	}
 
 	lines := bytes.Split(content, []byte("\n"))
-	var warnings []LintWarning
+	var warnings []lintWarning
 
 	inCodeBlock := false
 	var fencePrefix string // the backtick sequence that opened the current fence
@@ -102,8 +102,8 @@ func LintBodyPatterns(content []byte, filename string) []LintWarning {
 
 // matchLine checks a single line against all body patterns, suppressing
 // double-matches (e.g., $ARGUMENTS[0] should match $ARGUMENTS[N] but not $ARGUMENTS).
-func matchLine(line string, lineNum int, filename string) []LintWarning {
-	var warnings []LintWarning
+func matchLine(line string, lineNum int, filename string) []lintWarning {
+	var warnings []lintWarning
 
 	// Track byte ranges already matched by more specific patterns
 	// to prevent double-counting.
@@ -126,7 +126,7 @@ func matchLine(line string, lineNum int, filename string) []LintWarning {
 			}
 
 			consumed = append(consumed, matchRange{loc[0], loc[1]})
-			warnings = append(warnings, LintWarning{
+			warnings = append(warnings, lintWarning{
 				File:    filename,
 				Line:    lineNum,
 				Pattern: bp.pattern,

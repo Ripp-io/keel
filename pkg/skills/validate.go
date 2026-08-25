@@ -57,7 +57,7 @@ func ValidateDir(skillDirPath string) []Warning {
 	dirName := filepath.Base(skillDirPath)
 
 	// Rule 1: SKILL.md must exist
-	data, err := readSkillFile(skillDirPath)
+	data, err := ReadSkillFile(skillDirPath)
 	if err != nil {
 		return []Warning{{
 			SkillDir: dirName,
@@ -106,9 +106,9 @@ func ValidateAll(skillsDirPath string) []Warning {
 	return all
 }
 
-// readSkillFile reads SKILL.md (preferred) or skill.md from the given directory.
+// ReadSkillFile reads SKILL.md (preferred) or skill.md from the given directory.
 // Returns the file contents or an error if neither exists.
-func readSkillFile(dirPath string) ([]byte, error) {
+func ReadSkillFile(dirPath string) ([]byte, error) {
 	preferred := filepath.Join(dirPath, "SKILL.md")
 	data, err := os.ReadFile(preferred)
 	if err == nil {

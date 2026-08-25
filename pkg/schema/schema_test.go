@@ -174,7 +174,7 @@ func TestParse_ValidFile(t *testing.T) {
 
 func TestParseDefaults(t *testing.T) {
 	t.Parallel()
-	cfg, err := ParseDefaults()
+	cfg, err := parseDefaults()
 	require.NoError(t, err)
 
 	assert.Equal(t, "v1", cfg.Schema)
