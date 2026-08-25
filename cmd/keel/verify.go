@@ -77,6 +77,32 @@ func getAgentDirs() []string {
 	return dirs
 }
 
+// printVerifyResult prints the verification result in a consistent format.
+func printVerifyResult(cmd *cobra.Command, result *signing.VerifyResult, successLabel, failureLabel string) {
+	if result.Valid {
+		fmt.Fprintf(cmd.OutOrStdout(), "%s\n", successLabel)
+		fmt.Fprintf(cmd.OutOrStdout(), "Key ID:       %s\n", result.KeyID)
+		fmt.Fprintf(cmd.OutOrStdout(), "Key name:     %s\n", result.KeyName)
+		fmt.Fprintf(cmd.OutOrStdout(), "Content hash: %s\n", result.ContentHash)
+		fmt.Fprintf(cmd.OutOrStdout(), "Signed at:    %s\n", result.SignedAt)
+	} else {
+		fmt.Fprintf(cmd.OutOrStderr(), "%s\n", failureLabel)
+		if result.KeyID != "" {
+			fmt.Fprintf(cmd.OutOrStderr(), "Key ID:       %s\n", result.KeyID)
+		}
+		if result.KeyName != "" {
+			fmt.Fprintf(cmd.OutOrStderr(), "Key name:     %s\n", result.KeyName)
+		}
+		if result.ContentHash != "" {
+			fmt.Fprintf(cmd.OutOrStderr(), "Content hash: %s\n", result.ContentHash)
+		}
+		if result.SignedAt != "" {
+			fmt.Fprintf(cmd.OutOrStderr(), "Signed at:    %s\n", result.SignedAt)
+		}
+		fmt.Fprintf(cmd.OutOrStderr(), "Error:        %s\n", result.Error)
+	}
+}
+
 // verifyManifests verifies one or more compiled manifests.
 func verifyManifests(cmd *cobra.Command, manifests []*manifest.CompiledManifest, paths []string, ks *signing.KeyStore) error {
 	allValid := true
@@ -90,28 +116,9 @@ func verifyManifests(cmd *cobra.Command, manifests []*manifest.CompiledManifest,
 			return fmt.Errorf("verifying manifest %s: %w", agentDir, err)
 		}
 
-		if result.Valid {
-			fmt.Fprintf(cmd.OutOrStdout(), "Manifest signature valid\n")
-			fmt.Fprintf(cmd.OutOrStdout(), "Key ID:       %s\n", result.KeyID)
-			fmt.Fprintf(cmd.OutOrStdout(), "Key name:     %s\n", result.KeyName)
-			fmt.Fprintf(cmd.OutOrStdout(), "Content hash: %s\n", result.ContentHash)
-			fmt.Fprintf(cmd.OutOrStdout(), "Signed at:    %s\n", result.SignedAt)
-		} else {
+		printVerifyResult(cmd, result, "Manifest signature valid", "Manifest signature verification failed")
+		if !result.Valid {
 			allValid = false
-			fmt.Fprintf(cmd.OutOrStderr(), "Manifest signature verification failed\n")
-			if result.KeyID != "" {
-				fmt.Fprintf(cmd.OutOrStderr(), "Key ID:       %s\n", result.KeyID)
-			}
-			if result.KeyName != "" {
-				fmt.Fprintf(cmd.OutOrStderr(), "Key name:     %s\n", result.KeyName)
-			}
-			if result.ContentHash != "" {
-				fmt.Fprintf(cmd.OutOrStderr(), "Content hash: %s\n", result.ContentHash)
-			}
-			if result.SignedAt != "" {
-				fmt.Fprintf(cmd.OutOrStderr(), "Signed at:    %s\n", result.SignedAt)
-			}
-			fmt.Fprintf(cmd.OutOrStderr(), "Error:        %s\n", result.Error)
 		}
 
 		// Show per-layer signature status.
@@ -160,30 +167,9 @@ func verifyLayer(cmd *cobra.Command, layerPath string, ks *signing.KeyStore) err
 	}
 
 	// Print results.
-	if result.Valid {
-		fmt.Fprintf(cmd.OutOrStdout(), "Signature valid\n")
-		fmt.Fprintf(cmd.OutOrStdout(), "Key ID:       %s\n", result.KeyID)
-		fmt.Fprintf(cmd.OutOrStdout(), "Key name:     %s\n", result.KeyName)
-		fmt.Fprintf(cmd.OutOrStdout(), "Content hash: %s\n", result.ContentHash)
-		fmt.Fprintf(cmd.OutOrStdout(), "Signed at:    %s\n", result.SignedAt)
-		return nil
+	printVerifyResult(cmd, result, "Signature valid", "Signature verification failed")
+	if !result.Valid {
+		return fmt.Errorf("signature verification failed")
 	}
-
-	// Verification failed.
-	fmt.Fprintf(cmd.OutOrStderr(), "Signature verification failed\n")
-	if result.KeyID != "" {
-		fmt.Fprintf(cmd.OutOrStderr(), "Key ID:       %s\n", result.KeyID)
-	}
-	if result.KeyName != "" {
-		fmt.Fprintf(cmd.OutOrStderr(), "Key name:     %s\n", result.KeyName)
-	}
-	if result.ContentHash != "" {
-		fmt.Fprintf(cmd.OutOrStderr(), "Content hash: %s\n", result.ContentHash)
-	}
-	if result.SignedAt != "" {
-		fmt.Fprintf(cmd.OutOrStderr(), "Signed at:    %s\n", result.SignedAt)
-	}
-	fmt.Fprintf(cmd.OutOrStderr(), "Error:        %s\n", result.Error)
-
-	return fmt.Errorf("signature verification failed")
+	return nil
 }
