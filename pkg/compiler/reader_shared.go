@@ -63,6 +63,28 @@ func ReadJSONConfigStripped(candidates []string) (map[string]any, error) {
 	return raw, nil
 }
 
+// ReadMCPConfig reads MCP config from the first matching candidate path
+// and stores it in ir.MCP. Returns nil if no candidate exists. This is the
+// shared implementation for claude and cursor readers.
+func ReadMCPConfig(layerPath string, candidates []string, ir *LayerIR) error {
+	var fullPaths []string
+	for _, relPath := range candidates {
+		fullPaths = append(fullPaths, filepath.Join(layerPath, relPath))
+	}
+
+	raw, err := ReadJSONConfig(fullPaths)
+	if err != nil {
+		return err
+	}
+	if raw == nil {
+		return nil
+	}
+
+	slog.Debug("read mcp.json", "keys", len(raw), "layer", layerPath)
+	ir.MCP = raw
+	return nil
+}
+
 // SettingsReadCandidates builds the full candidate path list for settings files
 // in a native layer, deriving from the profile's SettingsCandidates. For each
 // candidate name, it checks dotDir first (higher priority), then the layer root.

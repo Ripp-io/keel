@@ -171,21 +171,8 @@ func stripCursorPermissionSuffix(perm string) string {
 // readMCP reads mcp.json from the layer root, falling back to .cursor/mcp.json
 // for real Cursor project directories.
 func (r *Reader) readMCP(layerPath string, ir *compiler.LayerIR) error {
-	candidates := []string{
-		filepath.Join(layerPath, "mcp.json"),
-		filepath.Join(layerPath, ".cursor", "mcp.json"),
-	}
-	raw, err := compiler.ReadJSONConfig(candidates)
-	if err != nil {
-		return err
-	}
-	if raw == nil {
-		return nil
-	}
-
-	slog.Debug("read mcp.json", "keys", len(raw), "layer", layerPath)
-	ir.MCP = raw
-	return nil
+	candidates := []string{"mcp.json", ".cursor/mcp.json"}
+	return compiler.ReadMCPConfig(layerPath, candidates, ir)
 }
 
 // readHooks reads hooks.json from the layer root, falling back to .cursor/hooks.json
