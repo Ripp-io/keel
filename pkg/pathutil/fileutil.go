@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 )
 
-// MaxConfigFileSize is the maximum allowed size for a configuration file (10 MB).
-const MaxConfigFileSize = 10 * 1024 * 1024
+// maxConfigFileSize is the maximum allowed size for a configuration file (10 MB).
+const maxConfigFileSize = 10 * 1024 * 1024
 
-// SafeReadFile reads a file after verifying it does not exceed MaxConfigFileSize.
+// SafeReadFile reads a file after verifying it does not exceed maxConfigFileSize.
 // This prevents unbounded memory allocation from unexpectedly large files.
 //
 // Note: downstream JSON/YAML parsing uses standard library unmarshallers without
@@ -21,8 +21,8 @@ func SafeReadFile(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if info.Size() > MaxConfigFileSize {
-		return nil, fmt.Errorf("file %q exceeds maximum size (%d > %d bytes)", path, info.Size(), MaxConfigFileSize)
+	if info.Size() > maxConfigFileSize {
+		return nil, fmt.Errorf("file %q exceeds maximum size (%d > %d bytes)", path, info.Size(), maxConfigFileSize)
 	}
 	return os.ReadFile(path)
 }

@@ -10,13 +10,13 @@ import (
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/schema"
 )
 
-const DefaultAgentToolsThreshold = 10
+const defaultAgentToolsThreshold = 10
 
 // checkAgentTools discovers agent definitions and validates that allowed-tools
 // lists do not exceed the configured threshold. All findings are warnings.
 func checkAgentTools(result *Result, layerPath string, keelExists bool, cfg *schema.KeelConfig) {
 	// Resolve threshold from config or use default.
-	threshold := DefaultAgentToolsThreshold
+	threshold := defaultAgentToolsThreshold
 	if cfg != nil && cfg.ValidateOpts != nil && cfg.ValidateOpts.AgentTools != nil {
 		threshold = *cfg.ValidateOpts.AgentTools
 	}

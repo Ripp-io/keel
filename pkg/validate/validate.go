@@ -384,7 +384,7 @@ func lintMarkdownBodies(result *Result, layerPath, targetAgent string) {
 			rel = path
 		}
 
-		warnings := LintBodyPatterns(content, rel)
+		warnings := lintBodyPatterns(content, rel)
 		for _, w := range warnings {
 			// If targeting a specific agent, skip warnings about patterns
 			// native to that agent — they will work fine.

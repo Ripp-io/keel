@@ -272,9 +272,9 @@ func classifyLayerType(path string) string {
 	return "project"
 }
 
-// ValidateAgentMarkers checks that no two agents share marker files or directories.
+// validateAgentMarkers checks that no two agents share marker files or directories.
 // Call this from tests to catch registration-time ambiguity.
-func ValidateAgentMarkers() error {
+func validateAgentMarkers() error {
 	seen := make(map[string]string) // marker -> agent format
 	for _, a := range agents {
 		name := string(a.Format)

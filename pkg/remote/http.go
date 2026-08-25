@@ -110,7 +110,7 @@ func checkHTTPCache(src ParsedSource, dirs httpCacheDirs) (string, error) {
 	}
 
 	// Warn if cache is expired in offline mode.
-	if isCacheExpired(meta, DefaultCacheTTL) {
+	if isCacheExpired(meta, defaultCacheTTL) {
 		slog.Warn("using expired cache entry in offline mode", "url", src.RawURL,
 			"age", time.Since(meta.LastFetched).Round(time.Hour))
 	}
@@ -572,9 +572,9 @@ func hashDirectory(dirPath string) (string, error) {
 	return manifest.HashLayerDir(dirPath)
 }
 
-// DefaultCacheTTL is the default time-to-live for cache entries.
+// defaultCacheTTL is the default time-to-live for cache entries.
 // After TTL expires, a re-fetch is attempted. If offline, stale entries are used with a warning.
-const DefaultCacheTTL = 7 * 24 * time.Hour // 7 days
+const defaultCacheTTL = 7 * 24 * time.Hour // 7 days
 
 // verifyHTTPCacheIntegrity checks the integrity of a cached HTTP layer by comparing
 // the stored content hash against the actual content. If the hash mismatches, logs
