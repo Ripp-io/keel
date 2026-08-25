@@ -90,15 +90,27 @@ func (s *AccumulationState) Finalize(externalVars map[string]string) error {
 	// 5. Instructions: concatenate with headers, resolve snippets,
 	//    conditionals, and substitute variables.
 	if len(s.instructions) > 0 {
+		// Count distinct layers contributing instructions.
+		uniqueLayers := make(map[string]bool)
+		for _, block := range s.instructions {
+			if block.LayerLabel != "" {
+				uniqueLayers[block.LayerLabel] = true
+			}
+		}
+		multiLayer := len(uniqueLayers) > 1
+
 		var instrBuilder strings.Builder
+		prevLabel := ""
 		for i, block := range s.instructions {
 			if i > 0 {
 				instrBuilder.WriteString("\n\n")
 			}
-			// Add section separator (# --- layerLabel ---) to separate layer contributions.
-			if block.LayerLabel != "" {
+			// Add section separator when multiple layers contribute.
+			// One header per layer (skip consecutive blocks from the same layer).
+			if multiLayer && block.LayerLabel != "" && block.LayerLabel != prevLabel {
 				instrBuilder.WriteString(fmt.Sprintf("# --- %s ---\n\n", block.LayerLabel))
 			}
+			prevLabel = block.LayerLabel
 			text := strings.TrimRight(string(merge.StripFrontmatter([]byte(block.Content))), "\n\r\t ")
 			instrBuilder.WriteString(text)
 			instrBuilder.WriteString("\n")
@@ -267,6 +279,7 @@ func (s *AccumulationState) Result() *AccumulatedResult {
 			ConfigBlocks:  configBlocks,
 			Categories:    categories,
 			Bin:           s.bin,
+			HookScripts:   s.hookScripts,
 			AgentSpecific: agentSpecific,
 			Attribution:   s.attribution,
 			Sandbox:       s.sandbox,

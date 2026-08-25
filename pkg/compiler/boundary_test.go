@@ -144,7 +144,9 @@ skills:
 func TestBoundary_ZeroLengthInstructionFile(t *testing.T) {
 	t.Parallel()
 
-	// Empty instruction file — should produce empty CLAUDE.md (not skip).
+	// Empty instruction file — should not produce CLAUDE.md.
+	// Single-layer compilations suppress layer headers, so empty content
+	// stays empty and no instruction file is written.
 
 	dir := t.TempDir()
 	layerDir := filepath.Join(dir, "layer")
@@ -164,10 +166,10 @@ instructions:
 	_, err := Compile("claude", layers, outputDir, CompileOptions{})
 	require.NoError(t, err)
 
-	// CLAUDE.md should exist (even if mostly empty, it has layer headers).
+	// No content to emit — CLAUDE.md should not exist.
 	instructionPath := filepath.Join(outputDir, "CLAUDE.md")
 	_, err = os.Stat(instructionPath)
-	assert.NoError(t, err, "CLAUDE.md should exist even with empty instruction content")
+	assert.True(t, os.IsNotExist(err), "CLAUDE.md should not exist for empty single-layer instructions")
 }
 
 func TestBoundary_OnlyPortableSettings(t *testing.T) {

@@ -73,6 +73,8 @@ type AccumulationState struct {
 	snippets         map[string][]byte
 	bin              []BinFile
 	binIndex         map[string]int // relpath → slice index for O(1) lookup
+	hookScripts      []BinFile
+	hookScriptIndex  map[string]int // relpath → slice index for O(1) lookup
 	deps             map[string]schema.DepSpec
 
 	// Governance
@@ -142,6 +144,7 @@ func NewAccumulationState(foldConfig FoldConfig, opts CompileOptions, absOutputD
 		repos:                  make(map[string]schema.Repo),
 		layerNames:             make(map[string]string),
 		force:                  newForceRegistry(),
+		hookScriptIndex:        make(map[string]int),
 		contentBlockSeparators: make(map[string]string),
 		variables: map[string]string{
 			// keel.agent is set later by AgentBuild.SetAgentVar()
@@ -152,6 +155,7 @@ func NewAccumulationState(foldConfig FoldConfig, opts CompileOptions, absOutputD
 			varKeelLayersCount: fmt.Sprintf("%d", layerCount),
 			varKeelVersion:     keelBuildVersion(),
 			varKeelState:       filepath.Join(absOutputDir, ".keel", "state"),
+			varKeelHooksDir:    filepath.Join(absOutputDir, ".keel", "hooks"),
 		},
 		foldConfig:            foldConfig,
 		distributable:         opts.Distributable,
@@ -250,8 +254,14 @@ func (s *AccumulationState) Fold(ir *LayerIR, layerLabel string) error {
 	}
 
 	// 6. Instructions: append blocks in order, tagging each with the layer header.
+	// Prefer the layer's name from keel.yml (e.g., "Agent Ripp") over the
+	// directory basename (e.g., "keel") for more meaningful section separators.
+	instrLabel := layerLabel
+	if ir.Name != "" {
+		instrLabel = ir.Name
+	}
 	for _, block := range ir.Instructions {
-		block.LayerLabel = layerLabel
+		block.LayerLabel = instrLabel
 		s.instructions = append(s.instructions, block)
 	}
 
@@ -316,10 +326,9 @@ func (s *AccumulationState) Fold(ir *LayerIR, layerLabel string) error {
 	// 11. Hooks: check force-lock, strip force fields, collect contributions.
 	//     All contributions are collected. Filtering based on settings force-lock
 	//     happens post-accumulation in ApplyHooksSettingsLock.
-	//     When a layer declares hooks, inject keel.hooks.dir to the hooks directory.
-	if ir.HooksDir != "" && len(ir.Hooks) > 0 {
-		// Last-writer-wins: if multiple layers declare hooks, the last one sets keel.hooks.dir.
-		s.variables[varKeelHooksDir] = ir.HooksDir
+	//     Hook scripts are accumulated for deployment to .keel/hooks/.
+	for _, hs := range ir.HookScripts {
+		s.foldHookScript(hs)
 	}
 	for eventName, entries := range ir.Hooks {
 		if locked, _ := s.force.isLocked("hook", eventName); locked {
@@ -493,6 +502,16 @@ func (s *AccumulationState) foldBin(bf BinFile, layerLabel string) {
 		s.bin = append(s.bin, bf)
 	}
 	s.overlays[overlayKey] = append(s.overlays[overlayKey], layerLabel)
+}
+
+// foldHookScript accumulates hook scripts with last-writer-wins per RelPath.
+func (s *AccumulationState) foldHookScript(hs BinFile) {
+	if i, ok := s.hookScriptIndex[hs.RelPath]; ok {
+		s.hookScripts[i] = hs
+	} else {
+		s.hookScriptIndex[hs.RelPath] = len(s.hookScripts)
+		s.hookScripts = append(s.hookScripts, hs)
+	}
 }
 
 // ProcessDeps installs or downloads dependencies. This is the only
