@@ -13,12 +13,3 @@ func BinDir() string {
 	}
 	return filepath.Join(home, ".keel", "bin")
 }
-
-// Dir returns the path to ~/.keel/.
-func Dir() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return filepath.Join(".", ".keel")
-	}
-	return filepath.Join(home, ".keel")
-}
