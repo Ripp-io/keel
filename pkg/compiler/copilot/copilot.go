@@ -13,6 +13,7 @@ func init() {
 	config.RegisterAgent(config.AgentMeta{Format: "copilot", Files: []string{"copilot-instructions.md"}, Dirs: []string{".github"}})
 	compiler.RegisterCompiler("copilot", Compile)
 	compiler.RegisterSimpleAdapter("copilot", ProjectProfile)
+	compiler.RegisterProfileFunc("copilot", func(compiler.Scope) compiler.AgentProfile { return ProjectProfile() })
 }
 
 // Compile produces Copilot-native configuration output.

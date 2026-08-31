@@ -13,6 +13,7 @@ func init() {
 	config.RegisterAgent(config.AgentMeta{Format: "agentsmd", Files: []string{"AGENTS.md"}, Dirs: []string{".agents"}})
 	compiler.RegisterCompiler("agentsmd", Compile)
 	compiler.RegisterSimpleAdapter("agentsmd", ProjectProfile)
+	compiler.RegisterProfileFunc("agentsmd", func(compiler.Scope) compiler.AgentProfile { return ProjectProfile() })
 }
 
 // Compile produces AGENTS.md-native configuration output.

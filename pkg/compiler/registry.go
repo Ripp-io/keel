@@ -41,3 +41,20 @@ func GetReader(agent string) (NativeReader, error) {
 	}
 	return ctor(), nil
 }
+
+var profileFuncs = make(map[string]func(Scope) AgentProfile)
+
+// RegisterProfileFunc registers a function that returns the AgentProfile for a
+// given scope. Called from each adapter's init().
+func RegisterProfileFunc(name string, fn func(Scope) AgentProfile) {
+	profileFuncs[name] = fn
+}
+
+// GetProfile returns the AgentProfile for an agent at a given scope.
+func GetProfile(agent string, scope Scope) (AgentProfile, bool) {
+	fn, ok := profileFuncs[agent]
+	if !ok {
+		return AgentProfile{}, false
+	}
+	return fn(scope), true
+}

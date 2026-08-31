@@ -13,6 +13,7 @@ func init() {
 	config.RegisterAgent(config.AgentMeta{Format: "aider", Files: []string{"CONVENTIONS.md"}, Dirs: []string{".aider"}})
 	compiler.RegisterCompiler("aider", Compile)
 	compiler.RegisterSimpleAdapter("aider", ProjectProfile)
+	compiler.RegisterProfileFunc("aider", func(compiler.Scope) compiler.AgentProfile { return ProjectProfile() })
 }
 
 // Compile produces Aider-native configuration output.

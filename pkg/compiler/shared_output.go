@@ -21,7 +21,7 @@ import (
 // into universal (no agent reference) and per-agent addenda.
 //
 // Returns SharedResult with universal content, agent addenda, and file records.
-func WriteSharedOutput(layers []config.Layer, outputDir string, agents map[string]string, opts CompileOptions) (*SharedResult, error) {
+func WriteSharedOutput(layers []config.Layer, outputDir string, sharedInstrPath string, agents map[string]string, opts CompileOptions) (*SharedResult, error) {
 	slog.Debug("running shared compilation phase", "outputDir", outputDir, "agents", len(agents))
 
 	// Compute absolute output dir for auto-vars
@@ -111,19 +111,19 @@ func WriteSharedOutput(layers []config.Layer, outputDir string, agents map[strin
 
 	// Write AGENTS.md if there's universal content
 	if len(universalInstructions) > 0 {
-		agentsPath := filepath.Join(outputDir, "AGENTS.md")
+		agentsPath := filepath.Join(outputDir, sharedInstrPath)
 		if err := os.MkdirAll(filepath.Dir(agentsPath), 0755); err != nil {
-			return nil, fmt.Errorf("creating directory for AGENTS.md: %w", err)
+			return nil, fmt.Errorf("creating directory for %s: %w", sharedInstrPath, err)
 		}
 		if err := os.WriteFile(agentsPath, universalInstructions, 0644); err != nil {
-			return nil, fmt.Errorf("writing AGENTS.md: %w", err)
+			return nil, fmt.Errorf("writing %s: %w", sharedInstrPath, err)
 		}
 		fileRecords = append(fileRecords, manifest.FileRecord{
-			Output:   "AGENTS.md",
+			Output:   sharedInstrPath,
 			Strategy: "user-editable",
 			Hash:     manifest.HashContent(universalInstructions),
 		})
-		slog.Debug("wrote shared instructions", "path", "AGENTS.md", "size", len(universalInstructions))
+		slog.Debug("wrote shared instructions", "path", sharedInstrPath, "size", len(universalInstructions))
 	}
 
 	// Write .mcp.json if there's universal MCP config

@@ -91,7 +91,7 @@ func TestCompileClaude_UserScope_InstructionsStillWritten(t *testing.T) {
 	_, err := Compile("claude", layers, outputDir, CompileOptions{Scope: ScopeUser})
 	require.NoError(t, err)
 
-	content, err := os.ReadFile(filepath.Join(outputDir, "CLAUDE.md"))
+	content, err := os.ReadFile(filepath.Join(outputDir, ".claude/CLAUDE.md"))
 	require.NoError(t, err, "expected CLAUDE.md at user scope")
 	assert.Contains(t, string(content), "user-scope instructions")
 }
@@ -157,7 +157,7 @@ func TestCompileClaude_UserScope_FullEnterprise(t *testing.T) {
 	_, err = os.Stat(filepath.Join(outputDir, ".mcp.json"))
 	assert.True(t, os.IsNotExist(err), ".mcp.json should NOT exist with user scope")
 
-	_, err = os.Stat(filepath.Join(outputDir, "CLAUDE.md"))
+	_, err = os.Stat(filepath.Join(outputDir, ".claude/CLAUDE.md"))
 	assert.NoError(t, err, "expected CLAUDE.md at user scope")
 
 	_, err = os.Stat(filepath.Join(outputDir, ".claude", "settings.json"))
