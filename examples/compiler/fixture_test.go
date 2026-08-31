@@ -361,7 +361,7 @@ func TestFixture_UserScope_Claude(t *testing.T) {
 	outputDir, _ := compileTo(t, "claude", compiler.CompileOptions{Scope: compiler.ScopeUser})
 	t.Run("ClaudeJSON_Exists", func(t *testing.T) { assert.True(t, testutil.FileExists(filepath.Join(outputDir, ".claude.json"))) })
 	t.Run("McpJSON_NotExists", func(t *testing.T) { assert.False(t, testutil.FileExists(filepath.Join(outputDir, ".mcp.json"))) })
-	t.Run("CLAUDE_MD_Exists", func(t *testing.T) { assert.True(t, testutil.FileExists(filepath.Join(outputDir, "CLAUDE.md"))) })
+	t.Run("CLAUDE_MD_Exists", func(t *testing.T) { assert.True(t, testutil.FileExists(filepath.Join(outputDir, ".claude/CLAUDE.md"))) })
 	t.Run("Settings_Exists", func(t *testing.T) {
 		assert.True(t, testutil.FileExists(filepath.Join(outputDir, ".claude/settings.json")))
 	})
