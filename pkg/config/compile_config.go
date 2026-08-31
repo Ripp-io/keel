@@ -108,6 +108,9 @@ func LoadConfigFile(path string) (*CompileConfig, error) {
 		return nil, fmt.Errorf("parsing config file %q: %w", path, err)
 	}
 
+	// Expand ~ in path-bearing fields.
+	cfg.expandTildePaths()
+
 	return cfg, nil
 }
 
@@ -176,6 +179,34 @@ func envOrDefault(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// expandTilde replaces a leading "~" or "~/" with the user's home directory.
+// Returns the path unchanged if home directory lookup fails or the path
+// doesn't start with "~".
+func expandTilde(path string) string {
+	if path == "~" {
+		if home, err := os.UserHomeDir(); err == nil {
+			return home
+		}
+	}
+	if strings.HasPrefix(path, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			return filepath.Join(home, path[2:])
+		}
+	}
+	return path
+}
+
+// expandTildePaths expands ~ in all path-bearing fields of the config.
+func (cfg *CompileConfig) expandTildePaths() {
+	for k, v := range cfg.Output {
+		cfg.Output[k] = expandTilde(v)
+	}
+	for i := range cfg.LayerEntries {
+		cfg.LayerEntries[i].Source = expandTilde(cfg.LayerEntries[i].Source)
+	}
+	cfg.UserConfig = expandTilde(cfg.UserConfig)
 }
 
 // NormalizeLayers merges CLI layer flags, config file layer entries, and
