@@ -49,7 +49,12 @@ func CompileMulti(agents map[string]string, layers []config.Layer, opts CompileO
 		sharedOpts.layerCache = cache
 		sharedOpts.PreInstalledDeps = preInstalled
 
-		shared, err := WriteSharedOutput(layers, outputDir, agents, sharedOpts)
+		// Resolve shared instruction path from agent profiles for this output group.
+		// Agents that actively reference the shared file (non-empty InstructionShimTemplate)
+		// determine the path. Falls back to "AGENTS.md" if no profile provides one.
+		sharedInstrPath := resolveSharedInstructionPath(groupAgents, opts.Scope)
+
+		shared, err := WriteSharedOutput(layers, outputDir, sharedInstrPath, agents, sharedOpts)
 		if err != nil {
 			return nil, fmt.Errorf("writing shared output to %s: %w", outputDir, err)
 		}
@@ -87,4 +92,25 @@ func CompileMulti(agents map[string]string, layers []config.Layer, opts CompileO
 	}
 
 	return results, nil
+}
+
+// resolveSharedInstructionPath determines where AGENTS.md should be written
+// by inspecting agent profiles. Agents with a non-empty InstructionShimTemplate
+// actively reference the shared file, so their SharedInstructionOutput is used.
+func resolveSharedInstructionPath(agents []string, scope Scope) string {
+	for _, agent := range agents {
+		if p, ok := GetProfile(agent, scope); ok {
+			// Only consider agents that actually reference the shared file via a shim
+			if p.InstructionShimTemplate != "" && p.SharedInstructionOutput != "" {
+				return p.SharedInstructionOutput
+			}
+		}
+	}
+	// Fallback: check any agent's SharedInstructionOutput
+	for _, agent := range agents {
+		if p, ok := GetProfile(agent, scope); ok && p.SharedInstructionOutput != "" {
+			return p.SharedInstructionOutput
+		}
+	}
+	return "AGENTS.md"
 }
