@@ -16,6 +16,7 @@ import (
 func init() {
 	config.RegisterAgent(config.AgentMeta{Format: "cursor", Files: []string{".cursorrules"}, Dirs: []string{".cursor"}})
 	compiler.RegisterCompiler("cursor", Compile)
+	compiler.RegisterProfileFunc("cursor", Profile)
 }
 
 // Compile produces Cursor output:

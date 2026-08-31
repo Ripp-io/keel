@@ -13,6 +13,7 @@ import (
 func init() {
 	config.RegisterAgent(config.AgentMeta{Format: "claude", Files: []string{"CLAUDE.md"}, Dirs: []string{".claude"}})
 	compiler.RegisterCompiler("claude", Compile)
+	compiler.RegisterProfileFunc("claude", Profile)
 }
 
 // Compile produces Claude output:

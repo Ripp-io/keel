@@ -13,6 +13,7 @@ func init() {
 	config.RegisterAgent(config.AgentMeta{Format: "cline", Files: []string{".clinerules"}, Dirs: []string{".cline"}})
 	compiler.RegisterCompiler("cline", Compile)
 	compiler.RegisterSimpleAdapter("cline", ProjectProfile)
+	compiler.RegisterProfileFunc("cline", func(compiler.Scope) compiler.AgentProfile { return ProjectProfile() })
 }
 
 // Compile produces Cline-native configuration output.
