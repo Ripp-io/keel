@@ -41,6 +41,8 @@ func UserProfile() compiler.AgentProfile {
 	p := ProjectProfile()
 	p.MCPOutput = ".claude.json"
 	p.MCPMergeInto = true
+	p.InstructionOutput = ".claude/CLAUDE.md"
+	p.SharedInstructionOutput = ".claude/AGENTS.md"
 	// worktree-include is project-only — remove it from ContentOutputs
 	p.ContentOutputs = compiler.FilterOut(p.ContentOutputs, func(b compiler.ContentBlockDef) string { return b.Name }, "worktree-include")
 	return p
