@@ -11,7 +11,7 @@ WORKSPACE ?= $(PWD)
 USER_CONFIG ?= $(HOME)/.config/keel
 SSH_DIR ?= $(HOME)/.ssh
 
-.PHONY: build-cli build build-dev build-runner update run run-with-config exec clean test vet lint demo docs
+.PHONY: build-cli install build-dev build-runner update run run-with-config exec clean test vet lint demo docs
 
 # ============================================================
 # Go CLI
@@ -20,6 +20,14 @@ SSH_DIR ?= $(HOME)/.ssh
 build-cli:
 	@mkdir -p dist
 	CGO_ENABLED=0 go build -ldflags "-X main.version=$(KEEL_BUILD)" -o dist/keel ./cmd/keel
+
+INSTALL_DIR ?= $(HOME)/.local/bin
+BINARY := keel
+
+install: build-cli ## Build and symlink keel into INSTALL_DIR (default ~/.local/bin)
+	@mkdir -p $(INSTALL_DIR)
+	@ln -sf $(abspath dist/$(BINARY)) $(INSTALL_DIR)/$(BINARY) && \
+		echo "$(INSTALL_DIR)/$(BINARY) → $(abspath dist/$(BINARY))"
 
 test:
 	@mkdir -p dist
