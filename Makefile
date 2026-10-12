@@ -10,8 +10,10 @@ REGION ?= us-east5
 WORKSPACE ?= $(PWD)
 USER_CONFIG ?= $(HOME)/.config/keel
 SSH_DIR ?= $(HOME)/.ssh
+INSTALL_DIR ?= $(HOME)/.local/bin
+BINARY := keel
 
-.PHONY: build-cli install build-dev build-runner update run run-with-config exec clean test vet lint demo docs
+.PHONY: build-cli install build build-dev build-runner update run run-with-config exec clean test vet lint demo docs
 
 # ============================================================
 # Go CLI
@@ -21,13 +23,17 @@ build-cli:
 	@mkdir -p dist
 	CGO_ENABLED=0 go build -ldflags "-X main.version=$(KEEL_BUILD)" -o dist/keel ./cmd/keel
 
-INSTALL_DIR ?= $(HOME)/.local/bin
-BINARY := keel
-
 install: build-cli ## Build and symlink keel into INSTALL_DIR (default ~/.local/bin)
 	@mkdir -p $(INSTALL_DIR)
-	@ln -sf $(abspath dist/$(BINARY)) $(INSTALL_DIR)/$(BINARY) && \
-		echo "$(INSTALL_DIR)/$(BINARY) → $(abspath dist/$(BINARY))"
+	@if [ -L $(INSTALL_DIR)/$(BINARY) ] && [ "$$(readlink $(INSTALL_DIR)/$(BINARY))" = "$(abspath dist/$(BINARY))" ]; then \
+		echo "$(INSTALL_DIR)/$(BINARY) → $(abspath dist/$(BINARY)) (up to date)"; \
+	elif [ -w $(INSTALL_DIR) ]; then \
+		ln -sf $(abspath dist/$(BINARY)) $(INSTALL_DIR)/$(BINARY); \
+		echo "$(INSTALL_DIR)/$(BINARY) → $(abspath dist/$(BINARY))"; \
+	else \
+		sudo ln -sf $(abspath dist/$(BINARY)) $(INSTALL_DIR)/$(BINARY); \
+		echo "$(INSTALL_DIR)/$(BINARY) → $(abspath dist/$(BINARY))"; \
+	fi
 
 test:
 	@mkdir -p dist
