@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/config"
+	"gitlab.com/ripp.io/oss/agentic/keel/pkg/manifest"
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/merge"
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/schema"
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/skills"
@@ -68,6 +69,9 @@ type Options struct {
 
 	// AgentToolsCheck controls whether agent tool count validation runs.
 	AgentToolsCheck bool
+
+	// Security controls whether security scanning runs on skill files.
+	Security bool
 }
 
 // Run performs all validation checks on a layer directory.
@@ -209,6 +213,16 @@ func Run(layerPath string, opts Options) Result {
 	// 9. Body content linting.
 	if opts.Lint {
 		lintMarkdownBodies(&result, layerPath, opts.Agent)
+	}
+
+	// 10. FileRef integrity check (SHA256 verification).
+	if cfg != nil {
+		checkFileRefIntegrity(&result, layerPath, cfg)
+	}
+
+	// 11. Security scanning.
+	if opts.Security {
+		checkSecurityIssues(&result, layerPath, keelExists, cfg)
 	}
 
 	return result
@@ -685,4 +699,150 @@ func checkSnippetInventory(result *Result, layerPath string, snippetDirs []strin
 			result.addWarn(fmt.Sprintf("snippet %q is defined but never referenced", name))
 		}
 	}
+}
+
+// checkFileRefIntegrity validates SHA256 content pins for all FileRef entries.
+// When a FileRef has a sha256 field set, the actual file content hash is
+// computed and compared. Errors are reported when:
+// - Hash mismatch (expected vs actual shown)
+// - Directory source has SHA256 (only individual files can be pinned)
+// When SHA256 is empty/unset, verification is skipped (backward compatible).
+// File-not-found errors are already handled by checkFileRefs, so we skip
+// missing files here rather than reporting duplicate errors.
+func checkFileRefIntegrity(result *Result, layerPath string, cfg *schema.KeelConfig) {
+	// Collect all FileRef slices from the config.
+	type refSet struct {
+		category string
+		refs     []schema.FileRef
+	}
+
+	var allRefs []refSet
+
+	if len(cfg.Instructions) > 0 {
+		allRefs = append(allRefs, refSet{"instructions", cfg.Instructions})
+	}
+	if len(cfg.Commands) > 0 {
+		allRefs = append(allRefs, refSet{"commands", cfg.Commands})
+	}
+	if len(cfg.Agents) > 0 {
+		allRefs = append(allRefs, refSet{"agents", cfg.Agents})
+	}
+	if len(cfg.Skills) > 0 {
+		allRefs = append(allRefs, refSet{"skills", cfg.Skills})
+	}
+	if cfg.MCP != nil && len(cfg.MCP.Servers) > 0 {
+		allRefs = append(allRefs, refSet{"mcp", cfg.MCP.Servers})
+	}
+	if len(cfg.Hooks) > 0 {
+		allRefs = append(allRefs, refSet{"hooks", cfg.Hooks})
+	}
+	if cfg.Permissions != nil && len(cfg.Permissions.Rules) > 0 {
+		allRefs = append(allRefs, refSet{"permissions", cfg.Permissions.Rules})
+	}
+	if len(cfg.Init) > 0 {
+		allRefs = append(allRefs, refSet{"init", cfg.Init})
+	}
+	if len(cfg.Bin) > 0 {
+		allRefs = append(allRefs, refSet{"bin", cfg.Bin})
+	}
+	if len(cfg.Snippets) > 0 {
+		allRefs = append(allRefs, refSet{"snippets", cfg.Snippets})
+	}
+	if len(cfg.Loop) > 0 {
+		allRefs = append(allRefs, refSet{"loop", cfg.Loop})
+	}
+	if len(cfg.WorktreeInclude) > 0 {
+		allRefs = append(allRefs, refSet{"worktree-include", cfg.WorktreeInclude})
+	}
+
+	// Check each FileRef that has SHA256 set.
+	for _, rs := range allRefs {
+		for _, ref := range rs.refs {
+			if ref.SHA256 == "" {
+				continue // No hash specified, skip verification
+			}
+
+			fullPath := filepath.Join(layerPath, ref.Source)
+			info, err := os.Stat(fullPath)
+
+			// If file doesn't exist, checkFileRefs already reported it.
+			if err != nil {
+				continue
+			}
+
+			// Directory sources cannot be pinned — only individual files.
+			if info.IsDir() {
+				result.addError(fmt.Sprintf(
+					"%s: %s has sha256 but is a directory — sha256 pinning only supports individual files",
+					rs.category, ref.Source,
+				))
+				continue
+			}
+
+			// Read file and compute hash.
+			content, readErr := os.ReadFile(fullPath)
+			if readErr != nil {
+				result.addError(fmt.Sprintf(
+					"%s: %s could not read file for hash verification: %v",
+					rs.category, ref.Source, readErr,
+				))
+				continue
+			}
+
+			actualHash := manifest.HashContent(content)
+			if actualHash != ref.SHA256 {
+				result.addError(fmt.Sprintf(
+					"%s: %s hash mismatch — expected %s, got %s",
+					rs.category, ref.Source, ref.SHA256, actualHash,
+				))
+			} else {
+				result.addPass(fmt.Sprintf(
+					"%s: %s hash verified",
+					rs.category, ref.Source,
+				))
+			}
+		}
+	}
+}
+
+// checkSecurityIssues scans skill files for security vulnerabilities.
+// Uses the security config from keel.yml if present, otherwise defaults to all checks enabled.
+func checkSecurityIssues(result *Result, layerPath string, keelExists bool, cfg *schema.KeelConfig) {
+	// Determine security config
+	var securityConfig *schema.SecurityConfig
+	if cfg != nil && cfg.ValidateOpts != nil {
+		securityConfig = cfg.ValidateOpts.Security
+	}
+
+	// Scan all skills
+	findings := skills.ScanSkills(layerPath, keelExists, cfg, securityConfig)
+
+	if len(findings) == 0 {
+		result.addPass("security: no issues detected")
+		return
+	}
+
+	// Group findings by severity
+	var blockCount, warnCount int
+	for _, finding := range findings {
+		msg := skills.FormatFinding(finding)
+		if finding.Severity == "block" {
+			result.addError(msg)
+			blockCount++
+		} else {
+			result.addWarn(msg)
+			warnCount++
+		}
+	}
+
+	// Summary message
+	summary := fmt.Sprintf("security: found %d issue(s)", len(findings))
+	if blockCount > 0 && warnCount > 0 {
+		summary = fmt.Sprintf("security: found %d blocking issue(s), %d warning(s)", blockCount, warnCount)
+	} else if blockCount > 0 {
+		summary = fmt.Sprintf("security: found %d blocking issue(s)", blockCount)
+	} else {
+		summary = fmt.Sprintf("security: found %d warning(s)", warnCount)
+	}
+	result.addWarn(summary)
 }

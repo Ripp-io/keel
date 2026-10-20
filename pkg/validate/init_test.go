@@ -10,5 +10,6 @@ import (
 	_ "gitlab.com/ripp.io/oss/agentic/keel/pkg/compiler/claude"
 	_ "gitlab.com/ripp.io/oss/agentic/keel/pkg/compiler/cline"
 	_ "gitlab.com/ripp.io/oss/agentic/keel/pkg/compiler/copilot"
+	_ "gitlab.com/ripp.io/oss/agentic/keel/pkg/compiler/opencode"
 	_ "gitlab.com/ripp.io/oss/agentic/keel/pkg/compiler/cursor"
 )

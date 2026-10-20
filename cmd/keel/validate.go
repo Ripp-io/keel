@@ -15,6 +15,7 @@ func newValidateCmd() *cobra.Command {
 	var lint bool
 	var tokenBudget bool
 	var agentToolsCheck bool
+	var security bool
 	var strict bool
 
 	cmd := &cobra.Command{
@@ -45,6 +46,7 @@ Use --agent to include agent-specific compatibility checks.`,
 				Lint:             lint,
 				TokenBudget:      tokenBudget,
 				AgentToolsCheck:  agentToolsCheck,
+				Security:         security,
 			})
 			printValidationResult(cmd, result)
 
@@ -70,6 +72,7 @@ Use --agent to include agent-specific compatibility checks.`,
 	cmd.Flags().BoolVar(&lint, "lint", true, "Scan markdown bodies for non-portable agent-specific patterns")
 	cmd.Flags().BoolVar(&tokenBudget, "token-budget", true, "Estimate token counts and warn about budget thresholds")
 	cmd.Flags().BoolVar(&agentToolsCheck, "agent-tools-check", true, "Warn when agent tool lists exceed threshold")
+	cmd.Flags().BoolVar(&security, "security", true, "Scan skill files for security issues (env exfiltration, shell injection, prompt injection)")
 	cmd.Flags().BoolVar(&strict, "strict", false, "Exit with error when any warnings are found (for CI)")
 
 	return cmd

@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -479,6 +480,133 @@ func TestRun_SnippetInventoryMatched(t *testing.T) {
 			assert.NotContains(t, item.Message, "never referenced")
 		}
 	}
+}
+
+// ---------------------------------------------------------------------------
+// FileRef SHA256 integrity checks
+// ---------------------------------------------------------------------------
+
+func TestRun_FileRefIntegrity_CorrectHash(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	// Create a test file with known content.
+	content := []byte("# Test Instructions")
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "instructions.md"), content, 0o644))
+
+	// Compute the expected hash (sha256:hex format).
+	hash := "sha256:9317f3c9f48986a355177e49e909e9b42e3b9512e554575820ba173cb43a0916"
+
+	keelYAML := fmt.Sprintf("schema: v1\nname: IntegrityTest\ninstructions:\n  - source: instructions.md\n    sha256: %s\n", hash)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "keel.yml"), []byte(keelYAML), 0o644))
+
+	result := Run(dir, Options{})
+
+	assert.Equal(t, 0, result.ErrorCount)
+	assert.True(t, hasItem(result, true, false, "instructions: instructions.md hash verified"), "expected hash verification pass")
+}
+
+func TestRun_FileRefIntegrity_WrongHash(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	content := []byte("# Test Instructions")
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "instructions.md"), content, 0o644))
+
+	// Use an incorrect hash.
+	wrongHash := "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+
+	keelYAML := fmt.Sprintf("schema: v1\nname: IntegrityTest\ninstructions:\n  - source: instructions.md\n    sha256: %s\n", wrongHash)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "keel.yml"), []byte(keelYAML), 0o644))
+
+	result := Run(dir, Options{})
+
+	assert.Equal(t, 1, result.ErrorCount)
+	assert.True(t, hasItem(result, false, false, "hash mismatch", "expected", "got"), "expected hash mismatch error")
+}
+
+func TestRun_FileRefIntegrity_NoHashSkips(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	content := []byte("# Test Instructions")
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "instructions.md"), content, 0o644))
+
+	keelYAML := "schema: v1\nname: IntegrityTest\ninstructions:\n  - source: instructions.md\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "keel.yml"), []byte(keelYAML), 0o644))
+
+	result := Run(dir, Options{})
+
+	assert.Equal(t, 0, result.ErrorCount)
+	// No hash verification message should appear when sha256 is not set.
+	for _, item := range result.Items {
+		assert.NotContains(t, item.Message, "hash verified")
+		assert.NotContains(t, item.Message, "hash mismatch")
+	}
+}
+
+func TestRun_FileRefIntegrity_DirectoryWithHash(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	// Create a directory reference.
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "instructions"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "instructions", "test.md"), []byte("# Test"), 0o644))
+
+	keelYAML := "schema: v1\nname: IntegrityTest\ninstructions:\n  - source: instructions/\n    sha256: sha256:abc123\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "keel.yml"), []byte(keelYAML), 0o644))
+
+	result := Run(dir, Options{})
+
+	assert.Equal(t, 1, result.ErrorCount)
+	assert.True(t, hasItem(result, false, false, "sha256 but is a directory", "individual files"), "expected directory hash error")
+}
+
+func TestRun_FileRefIntegrity_MissingFile(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	keelYAML := "schema: v1\nname: IntegrityTest\ninstructions:\n  - source: missing.md\n    sha256: sha256:abc123\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "keel.yml"), []byte(keelYAML), 0o644))
+
+	result := Run(dir, Options{})
+
+	// Should have error from checkFileRefs (file not found), but not from integrity check.
+	assert.Equal(t, 1, result.ErrorCount)
+	assert.True(t, hasItem(result, false, false, "missing.md referenced but not found"), "expected file not found error")
+	// Should NOT have a hash mismatch error.
+	assert.False(t, hasItem(result, false, false, "hash mismatch"), "should not report hash error for missing file")
+}
+
+func TestRun_FileRefIntegrity_MultipleCategories(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	// Create test files for different categories.
+	instructionsContent := []byte("# Test Instructions")
+	commandsContent := []byte("# Commands")
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "instructions.md"), instructionsContent, 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "commands.md"), commandsContent, 0o644))
+
+	instructionsHash := "sha256:9317f3c9f48986a355177e49e909e9b42e3b9512e554575820ba173cb43a0916"
+	commandsHash := "sha256:0546eeecc79cdd4b7be7e896531546be30634c441943f73e08c0b6bee0722a7c"
+
+	keelYAML := fmt.Sprintf(`schema: v1
+name: MultiCategoryTest
+instructions:
+  - source: instructions.md
+    sha256: %s
+commands:
+  - source: commands.md
+    sha256: %s
+`, instructionsHash, commandsHash)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "keel.yml"), []byte(keelYAML), 0o644))
+
+	result := Run(dir, Options{})
+
+	assert.Equal(t, 0, result.ErrorCount)
+	assert.True(t, hasItem(result, true, false, "instructions: instructions.md hash verified"), "expected instructions hash verified")
+	assert.True(t, hasItem(result, true, false, "commands: commands.md hash verified"), "expected commands hash verified")
 }
 
 // ---------------------------------------------------------------------------
