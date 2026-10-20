@@ -56,6 +56,36 @@ Switching agents is a flag change, not a rewrite.
 `keel import` captures your existing config; `keel compile --output <new-agent>=.` produces the new format.
 See [Agent Migration]({{< relref "guide/agent-migration" >}}).
 
+## How It Works
+
+Keel's compilation model is an assembly line: layers go in, native config comes out.
+Agents never know Keel exists.
+
+```
+Layers (input)          Compiler           Native Config (output)
+┌──────────────┐                          ┌──────────────────┐
+│ Company      │──┐                       │ .claude/         │
+│ Policy       │  │    ┌───────────┐      │   settings.json  │
+├──────────────┤  ├───▸│           │──────▸│   CLAUDE.md      │
+│ Team         │  │    │   keel    │      │   commands/      │
+│ Standards    │──┤    │  compile  │      │   skills/        │
+├──────────────┤  │    │           │      └──────────────────┘
+│ Project      │──┤    └───────────┘      ┌──────────────────┐
+│ Config       │  │                       │ .cursor/         │
+├──────────────┤  │                  ────▸│   cli-config.json│
+│ Personal     │──┘                       │   rules/         │
+│ Overrides    │                          │   commands/      │
+└──────────────┘                          └──────────────────┘
+```
+
+Each layer contributes config fragments.
+Keel merges them using six deterministic strategies (concatenation, deep-merge, overlay, etc.).
+The result is native config — `.claude/settings.json`, `CLAUDE.md`, `.cursor/cli-config.json` — identical to hand-written config.
+
+Governance happens at compile time.
+Force-locked values cannot be overridden by downstream layers.
+Provenance is recorded in the manifest — which layer set which value, whether it was locked, and who signed it.
+
 ## The Landscape
 
 Several tools solve pieces of the puzzle.

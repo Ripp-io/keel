@@ -5,12 +5,14 @@ weight: 20
 
 # Workspace Ideas
 
+> **Community ideas** — none of these workspace images exist yet.
+> They illustrate what's possible with Keel's layer system.
+> If you build one, [open an issue](https://gitlab.com/ripp.io/oss/agentic/keel/-/issues/new) and we'll link it here.
+
 Pre-built workspace images that combine **skills + tooling** for specific personas.
 These go beyond "just add instructions" — they bake in the right tools, MCP servers, visualization libraries, and agent behaviors for a domain.
 
 Each image extends a base Keel container image and adds domain-specific layers.
-None of these exist yet — they're ideas for the community to build.
-If you create one, [open an issue](https://gitlab.com/ripp.io/oss/keel/-/issues/new) and we'll link it here.
 
 ---
 

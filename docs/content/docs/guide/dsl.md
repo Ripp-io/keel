@@ -28,11 +28,13 @@ Every Keel DSL layer has a `keel.yml` that declares what configuration the layer
 | [`environment`](#environment) | Environment config (Cursor only) | Deep-merge |
 | [`rules`](#rules) | Rule files | Overlay |
 | [`snippets`](#snippets) | Shared text blocks for template includes | Overlay |
+| [`loop`](#loop) | Loop prompt files (Claude only) | Concatenate |
+| [`worktree-include`](#worktree-include) | Worktree include patterns (Claude only) | Concatenate |
 | [`init`](#init) | Initialization scripts | First-found |
-| [`repos`](#repos) | Repository definitions for workspace setup | Deep-merge by name |
+| [`repos`](#repos) | Repository definitions for workspace setup | Last-writer-wins per name |
 | [`settings`](#settings) | Model, sandbox, env vars, agent-specific settings | Deep-merge |
 | [`bin`](#bin) | Portable scripts shipped with the layer | Overlay |
-| [`deps`](#deps) | External binary dependencies (install or download) | Last-writer-wins per name |
+| [`deps`](#deps) | External binary dependencies (install or download) | First-occurrence-wins per name |
 | [`files`](#files) | Per-file governance policies | — |
 | [`validate`](#validate) | Validation options | — |
 
@@ -87,6 +89,8 @@ agents:
 
 skills:
   - source: skills/
+  - source: https://github.com/mattpocock/skills.git#main:skills/productivity
+    include: [grilling, grill-me]
 
 plugins:
   - source: plugins/
@@ -200,7 +204,7 @@ variables:
 ```
 
 Variables merge across layers — later layers override earlier ones for the same key.
-Two variables are auto-injected by Keel and always available: `keel.agent` (target agent name) and `keel.scope` (compilation scope).
+Keel auto-injects several variables that are always available without defining them: `keel.agent`, `keel.scope`, `keel.name`, `keel.output`, `keel.version`, `keel.bin.project`, `keel.bin.global`, `keel.layers.count`, `keel.state`, `keel.hooks.dir`, and per-dep `keel.deps.<name>.path` / `keel.deps.<name>.dir`.
 
 Reference variables in instructions with `${keel:name}` syntax (e.g., `${keel:api_url}`).
 Reference them in conditional expressions as dotted paths (e.g., `keel.agent == 'claude'`).
@@ -217,7 +221,8 @@ instructions:
   - source: coding-standards.md
 ```
 
-Each instruction file is separated by a `# --- layer name ---` header in the compiled output.
+When multiple layers contribute instructions, each layer's content is separated by a `# --- layer name ---` header in the compiled output.
+Single-layer compilations produce no headers.
 
 Instructions support [conditionals]({{< relref "conditionals" >}}) for agent-specific content and [snippets]({{< relref "snippets" >}}) for template includes.
 
@@ -233,17 +238,47 @@ Most collection fields in `keel.yml` use `FileRef` entries to reference companio
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `source` | string | Path to a file or directory (relative to the layer directory) |
+| `source` | string | Path to a file or directory, remote HTTPS URL, or Git repo URL |
 | `force` | bool | Force-lock this file (downstream layers cannot override it) |
+| `include` | string[] | Cherry-pick specific subdirectories from a directory source |
 
 Files and directories are distinguished automatically at resolution time.
 
-The `source` field can also be a remote HTTPS URL:
+### Remote Sources
+
+The `source` field supports remote URLs — plain HTTPS files, Git repositories, and archives:
 
 ```yaml
 instructions:
   - source: https://example.com/shared/coding-standards.md
+
+skills:
+  - source: https://github.com/org/skills.git#main:skills/productivity
+    include: [grilling, research]
 ```
+
+Git URLs use the fragment syntax `#branch:path` to specify a branch and subdirectory within the repo.
+
+### Include Filter
+
+When a source points at a directory containing multiple entries, `include` filters to specific subdirectories:
+
+```yaml
+skills:
+  - source: skills/
+  - source: https://github.com/mattpocock/skills.git#main:skills/productivity
+    include: [grilling, grill-me]
+  - source: https://github.com/mattpocock/skills.git#main:skills/engineering
+    include: [domain-modeling, to-spec, research]
+```
+
+Behavior:
+- Applies to the **first directory level** only — `include: [grilling]` means "only the `grilling/` subdirectory."
+Files and nested dirs within it are included normally.
+- Empty or absent `include` means all entries (backward compatible).
+- Ignored for file sources (non-directory FileRefs).
+- Works for all category types (skills, agents, commands, rules, etc.).
+- Include entries must be plain names — no path separators or `..`.
 
 ## Permissions
 
@@ -425,6 +460,20 @@ skills:
 Each subdirectory under `skills/` is a complete skill with its `SKILL.md` and companion files.
 The entire skill directory is preserved (scripts, references, assets).
 
+Multiple sources can be combined — local skills alongside cherry-picked skills from community collections:
+
+```yaml
+skills:
+  - source: skills/
+  - source: https://github.com/mattpocock/skills.git#main:skills/productivity
+    include: [grilling, grill-me]
+  - source: https://github.com/mattpocock/skills.git#main:skills/engineering
+    include: [domain-modeling, to-spec, wayfinder, research]
+```
+
+This pulls only the named skills from the remote repo without downloading everything else.
+See [Include Filter](#include-filter) for details.
+
 Uses the overlay merge strategy at the skill directory level.
 
 **Portability**: Both Claude and Cursor.
@@ -561,7 +610,7 @@ repos:
 | `required` | bool | — | Whether the repo is required for workspace init |
 | `force` | bool | false | Force-lock this repo definition |
 
-Repos merge by name across layers using deep-merge.
+Repos merge by name across layers — later layers replace the entire repo definition for the same name.
 
 ## Bin
 
@@ -617,7 +666,7 @@ Without the flag, deps are recorded in the manifest as `skipped`.
 
 **Auto-injected variables**: Each installed dep creates `keel.deps.<name>.path` and `keel.deps.<name>.dir` variables for use in hooks, MCP configs, and instructions.
 
-Deps merge by name across layers — later layers override earlier ones for the same dependency name.
+Deps merge by name across layers — the first layer to define a dependency name wins; later layers cannot override it.
 
 ## Settings
 
@@ -635,6 +684,7 @@ settings:
 | `model` | string | AI model to use (e.g., `sonnet`, `opus`, `haiku`) |
 | `claude` | string | Path to a `settings.claude.json` file |
 | `cursor` | string | Path to a `settings.cursor.json` file |
+| `opencode` | string | Path to a `settings.opencode.json` file |
 
 The `claude` and `cursor` fields reference agent-specific JSON settings files.
 These are deep-merged into the agent's native settings output.

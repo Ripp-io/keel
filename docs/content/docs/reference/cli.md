@@ -17,15 +17,16 @@ Every Keel CLI command with flags, examples, and expected behavior.
 | [`keel report`](#keel-report) | Generate compliance report from compiled manifest |
 | [`keel init`](#keel-init) | Scaffold a new layer interactively |
 | [`keel import`](#keel-import) | Convert native agent config to Keel DSL |
-| [`keel query`](#keel-query) | Query compiled config values |
 | [`keel cache`](#keel-cache) | Manage the remote layer cache |
 | [`keel clean`](#keel-clean) | Remove compiled output files |
 | [`keel drift`](#keel-drift) | Detect manual changes to compiled output |
+| [`keel snapshot`](#keel-snapshot) | Manage compiled output snapshots |
 | [`keel package`](#keel-package) | Create an archive from a directory |
 | [`keel global`](#keel-global) | Manage globally installed dependencies |
 | [`keel key`](#keel-key) | Manage Ed25519 signing keys |
 | [`keel sign`](#keel-sign) | Sign a layer with an Ed25519 key |
 | [`keel verify`](#keel-verify) | Verify signatures on a layer or compiled output |
+| [`keel completion`](#keel-completion) | Generate shell completions |
 
 ## `keel add`
 
@@ -195,7 +196,10 @@ keel compile -v environment=production
 | `--config` | `string` | `.keel/config.yml` | Config file for compile parameters |
 | `--output` | `agent=path` | from config | Agent output targets (repeatable) |
 | `--layer` | `string` | from config or `CONFIG_LAYERS` env | Layer paths (repeatable) |
-| `--distributable` | `string` | — | Produce a distributable layer with this name |
+| `--distributable` | `bool` | `false` | Produce a distributable layer (use `--name` to set the output name) |
+| `--name` | `string` | — | Project name (overrides layer-derived name in manifest) |
+| `--snapshot` | `bool` | `false` | Snapshot current state before compiling (for rollback) |
+| `--max-remote-layers` | `int` | `50` | Maximum remote layer count (`-1` for unlimited) |
 | `--user-config` | `string` | `/mnt/user-config` | User config directory |
 | `--user-priority` | `string` | `high` | User config priority: `high` or `low` |
 | `--scope` | `string` | `project` | Compilation scope: `project` or `user` |
@@ -267,7 +271,7 @@ keel compile --locked
 Produce a distributable layer:
 
 ```bash
-keel compile --distributable "platform-standards"
+keel compile --distributable --name "platform-standards"
 ```
 
 Compile for AGENTS.md output (alongside Claude and Cursor):
@@ -298,7 +302,7 @@ keel compile --package tar.gz
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CONFIG_LAYERS` | `/keel/layers/*` | Colon-separated layer paths (used when no `--layer` flags) |
+| `CONFIG_LAYERS` | unset (`/keel/layers/*` in Docker) | Colon-separated layer paths (used when no `--layer` flags) |
 | `USER_CONFIG` | `/mnt/user-config` | User config directory |
 | `USER_PRIORITY` | `high` | User config priority |
 
@@ -325,7 +329,8 @@ keel validate [path]
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--agent` | `string` | — | Target agent for compatibility checks (`claude`, `cursor`) |
-| `--agentskills-check` | `bool` | `true` | Run Agent Skills format validation on skill directories |
+| `--agent-skills-check` | `bool` | `true` | Run Agent Skills format validation on skill directories |
+| `--strict` | `bool` | `false` | Exit with error when any warnings are found (for CI) |
 | `--lint` | `bool` | `true` | Scan markdown for non-portable agent-specific patterns |
 | `--token-budget` | `bool` | `true` | Estimate token counts and warn about budget thresholds |
 | `--agent-tools-check` | `bool` | `true` | Warn when agent tool lists exceed threshold |
@@ -379,7 +384,13 @@ keel explain [dir] [section]
 | Argument | Default | Description |
 |----------|---------|-------------|
 | `dir` | `.` | Directory containing compiled `.keel.json` |
-| `section` | all | Show only a section: `files`, `locks`, `layers`, `deps`, or `signatures` |
+| `section` | all | Show only a section: `name`, `files`, `locks`, `layers`, `deps`, `signatures`, `repos`, `repo <name>`, or `init-dir` |
+
+### Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--format` | `string` | `text` | Output format: `text` or `json` |
 
 ### Examples
 
@@ -438,7 +449,7 @@ keel report [dir]
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--format` | `string` | `json` | Report format: `json`, `yaml`, or `text` |
+| `-f`, `--format` | `string` | `json` | Report format: `json`, `yaml`, or `text` |
 | `-o`, `--output` | `string` | stdout | Write to file instead of stdout |
 
 ### Examples
@@ -509,7 +520,7 @@ keel init [dir]
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--name` | `string` | — | Project name (skips prompt) |
-| `--agent` | `string` | — | Target agent (skips prompt) |
+| `--agent` | `string` | — | Target agent: `claude`, `cursor`, `agentsmd`, `cline`, `copilot`, `aider`, `all` (skips prompt) |
 
 ### Examples
 
@@ -576,41 +587,84 @@ See [Transpilation]({{< relref "../guide/transpilation" >}}) for details on the 
 
 ---
 
-## `keel query`
+## `keel snapshot`
 
-Query values from the compiled `.keel.json` manifest.
-Run after `keel compile`.
+Manage compiled output snapshots for behavioral rollback.
+
+### `keel snapshot create`
+
+Create a snapshot of the current compiled state.
 
 ```bash
-keel query <subcommand> [--dir <path>]
+keel snapshot create [dir]
 ```
 
-### Subcommands
+Auto-discovers `.keel.json` files in agent subdirectories (`.claude`, `.cursor`) and creates snapshots for each discovered agent.
+Snapshots are stored in `.keel/snapshots/` with timestamp-based IDs.
 
-| Subcommand | Description |
-|------------|-------------|
-| `name` | Print the compiled project name |
-| `repos` | Print the merged repos map (JSON) |
-| `repo <name>` | Print a single repo definition (JSON) |
-| `init-dir` | Print the init directory path |
-| `layers` | Print the layer stack |
-| `deps` | Print installed dependencies (JSON) |
+### Examples
+
+```bash
+keel snapshot create
+keel snapshot create ./output
+```
+
+### `keel snapshot list`
+
+List all snapshots with ID, agent, and timestamp.
+
+```bash
+keel snapshot list [dir]
+```
+
+### Examples
+
+```bash
+keel snapshot list
+keel snapshot list ./output
+```
+
+### `keel snapshot restore`
+
+Restore a previously captured snapshot, overwriting current compiled state.
+
+```bash
+keel snapshot restore <id> [dir]
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `id` | Snapshot ID (timestamp format: `20261019T143022Z`) |
+| `dir` | Directory containing snapshots (default: `.`) |
+
+### Examples
+
+```bash
+keel snapshot restore 20261019T143022Z
+keel snapshot restore 20261019T143022Z ./output
+```
+
+### `keel snapshot prune`
+
+Remove old snapshots, keeping only the N newest.
+
+```bash
+keel snapshot prune [dir]
+```
 
 ### Flags
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--dir` | `string` | `.` | Compiled output directory |
+| `--keep` | `int` | `5` | Number of newest snapshots to keep |
 
 ### Examples
 
 ```bash
-keel query name
-keel query repos
-keel query repo party-service
-keel query init-dir
-keel query layers --dir ./output
-keel query deps
+keel snapshot prune --keep 5
+keel snapshot prune --keep 3 ./output
 ```
 
 ---
@@ -660,6 +714,15 @@ keel clean [dir]
 Reads the `.keel.json` manifest to determine which files were compiled, then removes them.
 The `.keel.json` manifest is also removed (along with any legacy `keel.yml` or `keel-lock.json` files).
 Files not tracked in any manifest are preserved.
+
+Auto-discovers `.keel.json` in agent subdirectories (`.claude`, `.cursor`).
+If multiple agents are found, all are cleaned.
+
+### Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--force` | `bool` | `false` | Also remove user-editable files (e.g., CLAUDE.md) that are normally preserved |
 
 ### Examples
 
@@ -959,6 +1022,25 @@ Returns non-zero exit code if verification fails.
 
 ---
 
+## `keel completion`
+
+Generate shell completion scripts.
+
+```bash
+keel completion <shell>
+```
+
+Supported shells: `bash`, `zsh`, `fish`, `powershell`.
+
+### Examples
+
+```bash
+keel completion bash > /etc/bash_completion.d/keel
+keel completion zsh > "${fpath[1]}/_keel"
+```
+
+---
+
 ## Global Flags
 
 These flags are available on all commands:
@@ -966,4 +1048,5 @@ These flags are available on all commands:
 | Flag | Description |
 |------|-------------|
 | `-d`, `--debug` | Increase verbosity (`--debug` info, `-dd` debug) |
-| `--help` | Show help for the command |
+| `-h`, `--help` | Show help for the command |
+| `-v`, `--version` | Show version information (root command only; `-v` on `compile` maps to `--var`) |

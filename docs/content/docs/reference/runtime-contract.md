@@ -13,10 +13,28 @@ Set at image build time via `podman build --build-arg`.
 
 | Arg | Default | Description |
 |-----|---------|-------------|
-| `AGENT` | `claude` | Which AI tool to install (`claude`, `cursor`) |
+| `AGENT` | `claude` | Which AI tool to install (see below) |
 | `TOOL_VERSION` | `latest` | Pin the AI tool version (e.g. `2.1.126`) |
 | `KEEL_BUILD` | `dev` | Keel engine version tag |
 | `TAG` | `latest` | Image tag used in the FROM chain |
+
+### Supported AGENT values
+
+| Value | Agent | Install |
+|-------|-------|---------|
+| `claude` | Claude Code | npm |
+| `cursor` | Cursor Agent CLI | binary |
+| `opencode` | OpenCode | npm |
+| `antigravity` | Antigravity CLI | binary |
+| `goose` | Goose | binary |
+| `kilo` | Kilo Code | npm |
+| `codex` | Codex CLI | npm |
+| `qwen` | Qwen Code | npm |
+| `kiro` | Kiro | binary |
+| `cline` | Cline | npm |
+| `aider` | Aider | pip |
+| `vibe` | Mistral Vibe | pip/uv |
+| `theia` | Theia IDE | binary |
 
 ## Runtime Environment Variables
 

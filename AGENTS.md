@@ -91,7 +91,9 @@ files:                           # Per-file governance
 
 - `source: file.md` — single file
 - `source: dir/` — all matching files in directory
+- `source: https://github.com/org/repo.git#branch:path` — remote Git source
 - Supports `force: true` for governance
+- Supports `include: [name1, name2]` to cherry-pick subdirectories from a directory source
 
 ## Merge strategies by section
 

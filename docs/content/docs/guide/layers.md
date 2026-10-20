@@ -252,6 +252,20 @@ If not, but a `keel/` directory exists and is a layer, Keel uses it automaticall
 This means any project that follows the `keel/` convention can be used as a remote layer without specifying the subdirectory.
 The fallback does not apply when the root is already a layer, when you specify an explicit subpath, or when `keel/` is not a recognized layer format.
 
+#### `.keel/<agent>/` — implicit native layer
+
+Keel auto-prepends `.keel/<agent>/` (e.g., `.keel/claude/`, `.keel/cursor/`) as an implicit layer with the lowest priority.
+This lets the agent's existing native config participate in the layer stack without modification.
+
+The implicit layer is:
+- Auto-discovered when the directory exists
+- Never modified by Keel
+- Overridden by all explicitly configured layers
+- Skipped when the directory doesn't exist
+
+Example: If you have an existing `.keel/claude/` directory with native Claude config, it's automatically prepended when compiling for Claude.
+Layers you add via `keel.yml` or `--layer` flags override it.
+
 #### `.keel/local/` — personal overrides
 
 If `.keel/local/` exists, Keel appends it as the last layer — giving it the highest override priority.

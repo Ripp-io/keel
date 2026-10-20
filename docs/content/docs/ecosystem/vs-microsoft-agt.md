@@ -54,7 +54,7 @@ AGT ensures the agent *behaves* correctly while running.
 | Agent-to-agent security | ✅ Agent Mesh package | ❌ Not in scope |
 | Multi-layer config composition | ❌ | ✅ 6 merge strategies |
 | Per-key config governance | ❌ | ✅ Force-locks with provenance |
-| Cross-agent config portability | ❌ | ✅ Claude, Cursor, 30+ planned |
+| Cross-agent config portability | ❌ | ✅ 17 agents shipped |
 | Instruction templating | ❌ | ✅ Variables, conditionals, snippets |
 | Config drift prevention | ❌ | ✅ Lockfile verification |
 

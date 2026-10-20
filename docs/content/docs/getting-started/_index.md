@@ -14,7 +14,9 @@ Install Keel, pull community config, and compile your AI agent's configuration.
 go install gitlab.com/ripp.io/oss/agentic/keel/cmd/keel@latest
 ```
 
-> Requires Go 1.26+
+> Keel is distributed as a Go binary.
+> Pre-built binaries and package manager support are planned.
+> For now, Go 1.26+ is required for installation.
 
 Verify:
 
@@ -28,30 +30,45 @@ keel --help
 ```bash
 git clone git@gitlab.com:ripp.io/oss/agentic/keel.git
 cd keel
-make build-cli
-sudo mv dist/keel /usr/local/bin/
+make install              # builds and installs to ~/.local/bin
+# or build manually:
+# make build && sudo mv dist/keel /usr/local/bin/
 ```
 </details>
 
 ## Configure Your Agent
 
-Pull a popular community config and compile it as your global setup:
+The fastest way to get started is `keel add` — it pulls a layer, updates your config, and compiles in one step:
 
 ```bash
-keel compile \
-  --layer 'https://github.com/affaan-m/everything-claude-code.git#main' \
-  --output claude=~ --scope user
+keel add 'https://github.com/affaan-m/everything-claude-code.git#main'
 ```
 
 That's it.
-Keel clones the repo, auto-detects its Claude native config (`.claude/`, `CLAUDE.md`), and compiles it to your user-level paths.
+Keel adds the source to `.keel/config.yml`, auto-detects output targets from your project (`.claude/`, `.cursor/`, etc.), then compiles.
+During compilation, the remote repo is cloned and its format is auto-detected.
 
-> **Safe to run on existing projects.** Keel writes alongside your existing config — it never overwrites files it didn't create.
+> **Safe to run on existing projects.** Keel skips instruction files (CLAUDE.md, etc.) it didn't create and warns if compiled output would conflict with existing files. Use `--force` to overwrite.
 > Run `keel clean` at any time to remove only what Keel produced, leaving your files untouched.
+
+For user-level (global) config, add `--scope user`:
+
+```bash
+keel add --scope user 'https://github.com/affaan-m/everything-claude-code.git#main'
+```
+
+This compiles to whichever agent directories exist in your home directory (e.g., `~/.claude/`), affecting the agent's global configuration.
 
 ## Add Your Own Config
 
-Create a personal layer to add your own preferences on top:
+Create a personal layer to add your own preferences on top.
+The fastest way is `keel init`:
+
+```bash
+keel init ./my-tools --name my-toolkit --agent claude
+```
+
+Or create one manually:
 
 ```bash
 mkdir -p my-tools
@@ -79,16 +96,27 @@ Use worktrees for parallel feature work.
 Commit messages reference the ticket number.
 ```
 
-Now stack your config on top of the community layer:
+Add your layer on top of the community layer:
+
+```bash
+keel add ./my-tools
+```
+
+Community defaults load first, your personal config gets the final say.
+
+### How it works under the hood
+
+`keel add` is a convenience wrapper around `keel compile`.
+For explicit control or CI/CD workflows, use `keel compile` directly:
 
 ```bash
 keel compile \
   --layer 'https://github.com/affaan-m/everything-claude-code.git#main' \
   --layer ./my-tools \
-  --output claude=~ --scope user
+  --output claude=.
 ```
 
-Community defaults load first, your personal config gets the final say.
+This gives you full control over layer order, output targets, and variables — useful for advanced workflows and automation.
 
 ## Onboard in 30 Seconds
 
@@ -102,10 +130,11 @@ keel compile
 
 That's the entire onboarding workflow for AI tools.
 No "ask Sarah for her CLAUDE.md" or "copy the config from the wiki."
-The `.keel/config.yml` in the repo defines exactly what layers to compile, what governance applies, and what agents to target.
+The `.keel/config.yml` in the repo defines exactly what layers to compile and what agents to target.
+Governance comes from the layers themselves.
 
 Everyone gets the same setup — same permissions, same MCP servers, same instructions, same commands.
-Personal preferences go in `.keel/local/` (gitignored), so individuals can customize without affecting the shared config.
+Personal preferences go in `.keel/local/` (add it to `.gitignore`), so individuals can customize without affecting the shared config.
 
 ## Make It Repeatable
 
@@ -129,7 +158,7 @@ CLI flags are for quick experiments and CI overrides — the config file is the 
 
 ## Compile for Multiple Agents
 
-Add agents to your config file and every `keel compile` targets them all.
+Add agents to your config file (the `output:` section above) and every `keel compile` targets them all.
 The same layers compile for any supported agent — one source, every agent.
 
 ## What's Next

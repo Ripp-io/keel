@@ -18,7 +18,7 @@ Approach        Platform (you use their agent)         Infrastructure (configure
 Deployment      SaaS — Kilo hosts the agent            Self-hosted CLI — you host everything
 Governance      Admin console policies                 Compile-time force-locks in Git
 Config model    Platform-managed                       Multi-layer compilation
-Agent support   OpenClaw (Kilo's agent)                Claude, Cursor, 30+ planned
+Agent support   OpenClaw (Kilo's agent)                17 agents shipped
 Isolation       Firecracker microVM                    OCI containers (Podman/Docker)
 Pricing         $9-25/mo + usage-based inference       Open source, free
 ```

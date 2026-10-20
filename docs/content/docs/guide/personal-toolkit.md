@@ -1,6 +1,8 @@
 ---
 title: "Personal Toolkit"
 weight: 13
+aliases:
+  - /docs/guide/user-scope
 ---
 
 # Personal Toolkit

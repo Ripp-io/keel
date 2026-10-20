@@ -163,21 +163,71 @@ keel clean
 This removes every file Keel created — instructions, settings, hooks, commands, agents, skills — while preserving any files you created manually.
 The `.keel.json` manifest is also removed.
 
-### Future: `keel snapshot` and `keel rollback`
+### Snapshots
 
-A dedicated snapshot/rollback feature is planned but not yet built.
-The intended workflow:
+Keel can capture compiled output state as timestamped snapshots for behavioral rollback without touching source layers.
+
+#### `keel snapshot create`
+
+Capture the current compiled state:
 
 ```bash
-# Save current compiled state as a named snapshot
-keel snapshot save "before-security-hooks"
-
-# Something goes wrong — roll back to the snapshot
-keel rollback "before-security-hooks"
+keel snapshot create
+keel snapshot create ./output
 ```
 
-Until this ships, the Git-based workflow above is the rollback path.
-The lockfile (`--locked`) provides the verification layer — if you commit `.keel.json`, you can always verify that a recompile produces the same output.
+Auto-discovers `.keel.json` manifests in agent subdirectories and creates a snapshot for each discovered agent.
+Snapshots are stored in `.keel/snapshots/` with a timestamp-based ID.
+
+#### `keel snapshot list`
+
+List all snapshots with ID, agent, and timestamp:
+
+```bash
+keel snapshot list
+```
+
+Output example:
+
+```
+20261019T143022Z  claude  2026-10-19 14:30:22 UTC
+20261019T120000Z  cursor  2026-10-19 12:00:00 UTC
+```
+
+#### `keel snapshot restore`
+
+Restore a previous snapshot, overwriting current compiled state:
+
+```bash
+keel snapshot restore 20261019T143022Z
+keel snapshot restore 20261019T143022Z ./output
+```
+
+#### `keel snapshot prune`
+
+Remove old snapshots:
+
+```bash
+keel snapshot prune --keep 5
+keel snapshot prune --keep 3 ./output
+```
+
+Default: keeps the 5 newest snapshots.
+
+#### Auto-snapshot on compile
+
+Automatically capture a snapshot before each compilation:
+
+```bash
+keel compile --snapshot
+```
+
+This provides a rollback point if the new compilation introduces problems.
+
+### Choosing between Git rollback and snapshots
+
+**Git rollback** (revert + recompile) changes source configuration — use it when the layer change was wrong.
+**Snapshots** preserve the exact compiled output state — use them for quick behavioral rollback without touching layers, or when experimenting with compilation flags and variables.
 
 ## What's Next
 
