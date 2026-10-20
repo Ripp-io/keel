@@ -19,3 +19,8 @@ Runtime adapters are backend services that enable agent-native tooling to run in
 - **Runtime adapters**: Provide backend infrastructure for running agents in production environments
 
 The compile-time adapters produce the configuration; the runtime adapters execute it.
+
+## Base image
+
+The default Containerfile uses `node:22-bookworm-slim` (Debian bookworm).
+All adapters work on this base — pip-based agents install Python via apt during their `install.sh`.

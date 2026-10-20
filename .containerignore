@@ -1,8 +1,14 @@
 .git/
 .claude/
+.keel/
 dist/
 docs/
 examples/
 local/
+keel/
+Makefile
+LICENSE
+CONTRIBUTING.md
+SECURITY.md
 *.md
-!README.md
+!adapters/README.md

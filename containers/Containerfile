@@ -19,8 +19,8 @@
 # -----------------------------------------------------------
 # Stage 1: Build keel CLI
 # -----------------------------------------------------------
-# golang:1.26 — pinned to SHA256 digest for reproducible, tamper-evident builds.
-# To update: pull the latest digest from https://hub.docker.com/_/golang
+# golang:1.26 — builder stage (discarded after compilation).
+# Pin to a SHA256 digest for production builds.
 FROM golang:1.26 AS builder
 
 ARG KEEL_BUILD=dev
@@ -93,6 +93,7 @@ COPY --chown=keel:keel containers/config/instructions.md /keel/layers/00-base/in
 COPY --chown=keel:keel containers/config/bashrc /home/keel/.bashrc
 COPY --chmod=755 --chown=keel:keel containers/lib/config.sh /usr/local/lib/config.sh
 COPY --chmod=755 --chown=keel:keel containers/lib/git.sh /usr/local/lib/git.sh
+COPY --chmod=755 --chown=keel:keel containers/lib/init.sh /usr/local/lib/init.sh
 COPY --chmod=755 --chown=keel:keel containers/lib/launch.sh /usr/local/lib/launch.sh
 COPY --chmod=755 --chown=keel:keel containers/lib/status.sh /usr/local/lib/status.sh
 COPY --chmod=755 --chown=keel:keel containers/lib/workspace.sh /usr/local/lib/workspace.sh

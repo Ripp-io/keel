@@ -37,7 +37,7 @@ COPY --chmod=755 --chown=keel:keel containers/runner/entrypoint.sh /usr/local/bi
 USER keel
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD test -f /tmp/keel-healthy || exit 1
+    CMD pid=$(cat /tmp/keel-adapter.pid 2>/dev/null) && kill -0 "$pid" 2>/dev/null || exit 1
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["Review this codebase for bugs, security issues, and code quality concerns."]
