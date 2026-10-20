@@ -13,8 +13,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/compiler"
+	_ "gitlab.com/ripp.io/oss/agentic/keel/pkg/compiler/agentplugins"
 	_ "gitlab.com/ripp.io/oss/agentic/keel/pkg/compiler/agentsmd"
 	_ "gitlab.com/ripp.io/oss/agentic/keel/pkg/compiler/claude"
+	_ "gitlab.com/ripp.io/oss/agentic/keel/pkg/compiler/codex"
+	_ "gitlab.com/ripp.io/oss/agentic/keel/pkg/compiler/goose"
+	_ "gitlab.com/ripp.io/oss/agentic/keel/pkg/compiler/opencode"
 	_ "gitlab.com/ripp.io/oss/agentic/keel/pkg/compiler/cursor"
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/config"
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/drift"
@@ -1942,5 +1946,95 @@ instructions:
 	t.Run("Manifest_Removed", func(t *testing.T) {
 		assert.False(t, testutil.FileExists(filepath.Join(outputDir, ".claude", ".keel.json")),
 			"manifest should be removed after clean")
+	})
+}
+
+// ---------------------------------------------------------------------------
+// TestFixture_CompileCodex
+// ---------------------------------------------------------------------------
+
+func TestFixture_CompileCodex(t *testing.T) {
+	t.Parallel()
+
+	outputDir, result := compileTo(t, "codex", compiler.CompileOptions{})
+
+	t.Run("Compilation_Succeeds", func(t *testing.T) {
+		assert.NotNil(t, result)
+	})
+
+	t.Run("AGENTS_MD_Exists", func(t *testing.T) {
+		assert.True(t, testutil.FileExists(filepath.Join(outputDir, "AGENTS.md")))
+	})
+
+	t.Run("AGENTS_MD_HasContent", func(t *testing.T) {
+		content := readFile(t, outputDir, "AGENTS.md")
+		assert.NotEmpty(t, content)
+		assert.Contains(t, content, "Keel Base Instructions")
+	})
+
+	t.Run("CodexDir_Exists", func(t *testing.T) {
+		assert.True(t, testutil.FileExists(filepath.Join(outputDir, ".codex")))
+	})
+
+	t.Run("Agent_Correct", func(t *testing.T) {
+		assert.Equal(t, "codex", result.Output.Agent)
+	})
+}
+
+// ---------------------------------------------------------------------------
+// TestFixture_CompileGoose
+// ---------------------------------------------------------------------------
+
+func TestFixture_CompileGoose(t *testing.T) {
+	t.Parallel()
+
+	outputDir, result := compileTo(t, "goose", compiler.CompileOptions{})
+
+	t.Run("Compilation_Succeeds", func(t *testing.T) {
+		assert.NotNil(t, result)
+	})
+
+	t.Run("Goosehints_Exists", func(t *testing.T) {
+		assert.True(t, testutil.FileExists(filepath.Join(outputDir, ".goosehints")))
+	})
+
+	t.Run("Goosehints_HasContent", func(t *testing.T) {
+		content := readFile(t, outputDir, ".goosehints")
+		assert.NotEmpty(t, content)
+		assert.Contains(t, content, "Keel Base Instructions")
+	})
+
+	t.Run("GooseDir_Exists", func(t *testing.T) {
+		assert.True(t, testutil.FileExists(filepath.Join(outputDir, ".goose")))
+	})
+
+	t.Run("Agent_Correct", func(t *testing.T) {
+		assert.Equal(t, "goose", result.Output.Agent)
+	})
+}
+
+// ---------------------------------------------------------------------------
+// TestFixture_CompileAgentPlugins
+// ---------------------------------------------------------------------------
+
+func TestFixture_CompileAgentPlugins(t *testing.T) {
+	t.Parallel()
+
+	outputDir, result := compileTo(t, "agentplugins", compiler.CompileOptions{})
+
+	t.Run("Agent_Correct", func(t *testing.T) {
+		assert.Equal(t, "agentplugins", result.Output.Agent)
+	})
+
+	t.Run("OutputDir_Exists", func(t *testing.T) {
+		assert.True(t, testutil.FileExists(filepath.Join(outputDir, ".agentplugins")))
+	})
+
+	t.Run("NoAGENTSmd", func(t *testing.T) {
+		assert.False(t, testutil.FileExists(filepath.Join(outputDir, "AGENTS.md")))
+	})
+
+	t.Run("Manifest_Exists", func(t *testing.T) {
+		assert.True(t, testutil.FileExists(filepath.Join(outputDir, ".agentplugins", ".keel.json")))
 	})
 }
