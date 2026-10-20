@@ -43,8 +43,16 @@ func CompileMulti(agents map[string]string, layers []config.Layer, opts CompileO
 	// Track SharedResult per outputDir
 	sharedResults := make(map[string]*SharedResult)
 
-	// Run shared phase for each outputDir group (always, for forward compatibility)
+	// Run shared phase for each outputDir group, but only when at least one
+	// agent in the group uses shared output (SharedInstructionOutput or
+	// SharedMCPOutput). Packaging-only targets like agentplugins don't need
+	// the shared phase — skipping it avoids writing an unused AGENTS.md.
 	for outputDir, groupAgents := range outputDirGroups {
+		if !groupNeedsSharedPhase(groupAgents, opts.Scope) {
+			slog.Debug("skipping shared phase — no agent needs shared output", "outputDir", outputDir)
+			continue
+		}
+
 		sharedOpts := opts
 		sharedOpts.layerCache = cache
 		sharedOpts.PreInstalledDeps = preInstalled
@@ -92,6 +100,20 @@ func CompileMulti(agents map[string]string, layers []config.Layer, opts CompileO
 	}
 
 	return results, nil
+}
+
+// groupNeedsSharedPhase returns true if any agent in the group uses shared
+// output files (SharedInstructionOutput or SharedMCPOutput). When all agents
+// produce standalone output (like agentplugins), the shared phase is skipped.
+func groupNeedsSharedPhase(agents []string, scope Scope) bool {
+	for _, agent := range agents {
+		if p, ok := GetProfile(agent, scope); ok {
+			if p.SharedInstructionOutput != "" || p.SharedMCPOutput != "" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // resolveSharedInstructionPath determines where AGENTS.md should be written

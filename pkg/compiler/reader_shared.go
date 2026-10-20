@@ -249,8 +249,8 @@ func ReadKeelYmlSidecar(layerPath string, ir *LayerIR) {
 // ir.Categories with the results. This is the shared implementation used by
 // both ClaudeReader and CursorReader — the only difference between them was
 // the dot-directory prefix, which is resolved by the caller before passing
-// catDir.
-func ReadCategoryDir(catDir, category string, ir *LayerIR) error {
+// catDir. The optional include parameter filters subdirectories at depth 1.
+func ReadCategoryDir(catDir, category string, ir *LayerIR, include []string) error {
 	info, err := os.Stat(catDir)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -260,6 +260,15 @@ func ReadCategoryDir(catDir, category string, ir *LayerIR) error {
 	}
 	if !info.IsDir() {
 		return nil
+	}
+
+	// Build include set for O(1) lookup
+	var includeSet map[string]bool
+	if len(include) > 0 {
+		includeSet = make(map[string]bool, len(include))
+		for _, name := range include {
+			includeSet[name] = true
+		}
 	}
 
 	var files []CategoryFile
@@ -275,6 +284,27 @@ func ReadCategoryDir(catDir, category string, ir *LayerIR) error {
 		// Skip the root directory itself
 		if rel == "." {
 			return nil
+		}
+
+		// Apply include filter at depth 1
+		if includeSet != nil {
+			topDir := strings.SplitN(rel, string(filepath.Separator), 2)[0]
+			isDepth1 := !strings.Contains(rel, string(filepath.Separator))
+
+			if d.IsDir() && isDepth1 {
+				// At depth 1 directory entry - check if in include list
+				if !includeSet[topDir] {
+					return filepath.SkipDir
+				}
+			} else if isDepth1 {
+				// File directly in root - skip if include is set (include applies to subdirs only)
+				return nil
+			} else {
+				// Deeper than depth 1 - check if parent directory is in include list
+				if !includeSet[topDir] {
+					return nil
+				}
+			}
 		}
 
 		if d.IsDir() {
@@ -304,7 +334,7 @@ func ReadCategoryDir(catDir, category string, ir *LayerIR) error {
 		if ir.Categories == nil {
 			ir.Categories = make(map[string][]CategoryFile)
 		}
-		ir.Categories[category] = files
+		ir.Categories[category] = append(ir.Categories[category], files...)
 		slog.Debug("read category directory", "category", category, "files", len(files), "layer", catDir)
 	}
 
@@ -357,11 +387,11 @@ func ReadInstructions(layerPath string, candidates []string, ir *LayerIR) {
 // <root>/<category>. The dot-directory is checked first; root is a fallback.
 func ReadCategories(layerPath, dotDir string, categories []string, ir *LayerIR) error {
 	for _, cat := range categories {
-		if err := ReadCategoryDir(filepath.Join(layerPath, dotDir, cat), cat, ir); err != nil {
+		if err := ReadCategoryDir(filepath.Join(layerPath, dotDir, cat), cat, ir, nil); err != nil {
 			return err
 		}
 		if _, exists := ir.Categories[cat]; !exists {
-			if err := ReadCategoryDir(filepath.Join(layerPath, cat), cat, ir); err != nil {
+			if err := ReadCategoryDir(filepath.Join(layerPath, cat), cat, ir, nil); err != nil {
 				return err
 			}
 		}

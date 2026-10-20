@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	toml "github.com/pelletier/go-toml/v2"
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/manifest"
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/pathutil"
 )
@@ -378,6 +379,41 @@ func WriteSettings(result *AccumulatedResult, profile AgentProfile, outputDir st
 		Strategy: "deep-merge",
 		Hash:     hash,
 	}, true, nil
+}
+
+// WriteTOMLSettings writes the settings file as TOML using the pre-assembled
+// settings map. Mirrors WriteSettings but produces TOML output for agents
+// whose native format is TOML (Codex, OpenHands, Vibe).
+func WriteTOMLSettings(result *AccumulatedResult, profile AgentProfile, outputDir string) (manifest.FileRecord, bool, error) {
+	if result.Content.SkipSettings || len(result.Content.Settings) == 0 {
+		return manifest.FileRecord{}, false, nil
+	}
+	settingsPath := filepath.Join(outputDir, profile.OutputRoot, profile.SettingsFile)
+	hash, err := WriteTOMLFileWithHash(settingsPath, result.Content.Settings)
+	if err != nil {
+		return manifest.FileRecord{}, false, err
+	}
+	return manifest.FileRecord{
+		Output:   filepath.Join(profile.OutputRoot, profile.SettingsFile),
+		Strategy: "deep-merge",
+		Hash:     hash,
+	}, true, nil
+}
+
+// WriteTOMLFileWithHash marshals data to TOML, writes to path, and returns the
+// content hash. Parallel to WriteJSONFileWithHash for TOML-native agents.
+func WriteTOMLFileWithHash(path string, data any) (string, error) {
+	out, err := toml.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(path, out, 0644); err != nil {
+		return "", err
+	}
+	return manifest.HashContent(out), nil
 }
 
 // SimpleWriter is a Writer for instructions-only agents (aider, cline, copilot).

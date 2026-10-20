@@ -51,6 +51,12 @@ func (r *KeelDSLReader) readSettings(layerPath string, cfg *schema.KeelConfig, i
 			decomposeSettingsIntoIR(ir, "cursor", data)
 		}
 	}
+	if cfg.Settings.OpenCode != "" {
+		data := readSettingsWithFallbacks(layerPath, cfg.Settings.OpenCode, "opencode.json")
+		if data != nil {
+			decomposeSettingsIntoIR(ir, "opencode", data)
+		}
+	}
 
 	// Portable settings from the struct — all Settings struct fields are portable.
 	// They go to ir.Settings (not ir.AgentSpecific) so writers can consume them.

@@ -155,7 +155,7 @@ func (r *KeelDSLReader) readCategoryRefs(layerPath, category string, refs []sche
 		for _, ref := range resolved {
 			if ref.isDir {
 				// Use the existing ReadCategoryDir helper for directory refs.
-				if err := ReadCategoryDir(ref.sourcePath, category, ir); err != nil {
+				if err := ReadCategoryDir(ref.sourcePath, category, ir, fileRef.Include); err != nil {
 					slog.Debug("reading category directory", "category", category, "dir", ref.sourcePath, "error", err)
 				}
 				// If the FileRef has force: true, register force for all files in the dir.
