@@ -50,11 +50,29 @@ type TokenBudgetConfig struct {
 	Layer        *int `yaml:"layer,omitempty"`        // total layer content tokens (default: 0 = disabled)
 }
 
+// SecurityConfig controls security scanning behavior.
+// All categories are enabled by default (opt-out via false).
+type SecurityConfig struct {
+	EnvExfiltration *bool           `yaml:"env-exfiltration,omitempty"`  // detect env var access patterns (default: true)
+	ShellInjection  *bool           `yaml:"shell-injection,omitempty"`   // detect shell command execution (default: true)
+	PromptInjection *bool           `yaml:"prompt-injection,omitempty"`  // detect prompt manipulation (default: true)
+	SuspiciousURLs  *bool           `yaml:"suspicious-urls,omitempty"`   // detect data URIs, file://, raw IPs (default: true)
+	CustomPatterns  []CustomPattern `yaml:"custom-patterns,omitempty"`   // user-defined security patterns
+}
+
+// CustomPattern defines a custom security pattern to scan for.
+type CustomPattern struct {
+	Pattern  string `yaml:"pattern"`            // regex pattern to match
+	Message  string `yaml:"message"`            // human-readable description
+	Severity string `yaml:"severity,omitempty"` // "block" or "warn" (default: warn)
+}
+
 // ValidateOptions controls validation behavior.
 type ValidateOptions struct {
 	AgentSkills *bool              `yaml:"agentskills,omitempty"`
 	TokenBudget *TokenBudgetConfig `yaml:"token-budget,omitempty"`
 	AgentTools  *int               `yaml:"agent-tools,omitempty"`
+	Security    *SecurityConfig    `yaml:"security,omitempty"`
 }
 
 // FilePolicy defines per-file governance in v1-claude / v1-cursor layers.
@@ -66,8 +84,10 @@ type FilePolicy struct {
 // FileRef references a file or directory with optional policy.
 // Used for instructions, commands, agents, skills, init, and permissions.
 type FileRef struct {
-	Source string `yaml:"source"`
-	Force  bool   `yaml:"force"`
+	Source  string   `yaml:"source"`
+	Force   bool     `yaml:"force"`
+	Include []string `yaml:"include,omitempty"`
+	SHA256  string   `yaml:"sha256,omitempty"`
 }
 
 // MCPConfig holds MCP server definitions and governance policy.
@@ -154,9 +174,19 @@ type Settings struct {
 	// ============================================================================
 	// PORTABLE SETTINGS (work across all agents)
 	// ============================================================================
-	Model  string `yaml:"model,omitempty"  json:"model,omitempty"`
-	Claude string `yaml:"claude,omitempty" json:"claude,omitempty"` // path to settings.claude.json
-	Cursor string `yaml:"cursor,omitempty" json:"cursor,omitempty"` // path to settings.cursor.json
+	Model        string `yaml:"model,omitempty"        json:"model,omitempty"`
+	Claude       string `yaml:"claude,omitempty"       json:"claude,omitempty"`       // path to settings.claude.json
+	Cursor       string `yaml:"cursor,omitempty"       json:"cursor,omitempty"`       // path to settings.cursor.json
+	OpenCode     string `yaml:"opencode,omitempty"     json:"opencode,omitempty"`     // path to settings.opencode.json
+	Amp          string `yaml:"amp,omitempty"          json:"amp,omitempty"`          // path to settings.amp.json
+	Antigravity  string `yaml:"antigravity,omitempty"  json:"antigravity,omitempty"`  // path to settings.antigravity.json
+	Codex        string `yaml:"codex,omitempty"        json:"codex,omitempty"`        // path to settings.codex.json
+	Goose        string `yaml:"goose,omitempty"        json:"goose,omitempty"`        // path to settings.goose.json
+	Kilo         string `yaml:"kilo,omitempty"         json:"kilo,omitempty"`         // path to settings.kilo.json
+	Kiro         string `yaml:"kiro,omitempty"         json:"kiro,omitempty"`         // path to settings.kiro.json
+	OpenHands    string `yaml:"openhands,omitempty"    json:"openhands,omitempty"`    // path to settings.openhands.json
+	Qwen         string `yaml:"qwen,omitempty"         json:"qwen,omitempty"`         // path to settings.qwen.json
+	Vibe         string `yaml:"vibe,omitempty"         json:"vibe,omitempty"`         // path to settings.vibe.json
 
 	// ============================================================================
 	// AGENT/MODEL CONFIGURATION
@@ -461,6 +491,31 @@ func (c *KeelConfig) Validate() error {
 		return err
 	}
 
+	// Validate FileRef include filters.
+	fileRefGroups := map[string][]FileRef{
+		"instructions":      c.Instructions,
+		"mcp.servers":       c.mcpServers(),
+		"permissions.rules": c.permRules(),
+		"commands":          c.Commands,
+		"agents":            c.Agents,
+		"skills":            c.Skills,
+		"hooks":             c.Hooks,
+		"plugins":           c.Plugins,
+		"agent-memory":      c.AgentMemory,
+		"environment":       c.Environment,
+		"rules":             c.Rules,
+		"init":              c.Init,
+		"snippets":          c.Snippets,
+		"bin":               c.Bin,
+		"loop":              c.Loop,
+		"worktree-include":  c.WorktreeInclude,
+	}
+	for name, refs := range fileRefGroups {
+		if err := validateFileRefs(name, refs); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -518,6 +573,19 @@ func (c *KeelConfig) validateDeps() error {
 		}
 		if dep.Executable != "" && dep.Download == "" {
 			return fmt.Errorf("deps[%q]: executable requires download to be set", name)
+		}
+	}
+	return nil
+}
+
+// validateFileRefs checks that include entries in FileRefs are safe directory names
+// without path separators.
+func validateFileRefs(groupName string, refs []FileRef) error {
+	for i, ref := range refs {
+		for _, inc := range ref.Include {
+			if strings.ContainsAny(inc, "/\\") || strings.Contains(inc, "..") {
+				return fmt.Errorf("%s[%d]: include entry %q must not contain path separators or '..'", groupName, i, inc)
+			}
 		}
 	}
 	return nil

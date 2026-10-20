@@ -43,35 +43,44 @@ func processDSLLayer(layerPath string) (*schema.KeelConfig, error) {
 func resolveInstructionFiles(layerPath string, refs []schema.FileRef) []string {
 	var files []string
 	for _, ref := range refs {
-		if ref.Source != "" {
-			fullPath := filepath.Join(layerPath, ref.Source)
-			// Validate path stays within layer (symlink protection)
+		if ref.Source == "" {
+			continue
+		}
+
+		var fullPath string
+		if filepath.IsAbs(ref.Source) {
+			// Already resolved (remote source) — use as-is, skip containment check.
+			fullPath = ref.Source
+		} else {
+			fullPath = filepath.Join(layerPath, ref.Source)
+			// Validate local path stays within layer (symlink protection)
 			if !pathutil.ContainsPath(layerPath, fullPath) {
 				slog.Warn("instruction source escapes layer boundary, skipping", "source", ref.Source, "layer", layerPath)
 				continue
 			}
-			info, err := os.Stat(fullPath)
+		}
+
+		info, err := os.Stat(fullPath)
+		if err != nil {
+			slog.Debug("instruction source not found, skipping", "source", ref.Source, "layer", layerPath)
+			continue
+		}
+		if !info.IsDir() {
+			files = append(files, fullPath)
+		} else {
+			// Directory reference — walk and collect .md files
+			entries, err := os.ReadDir(fullPath)
 			if err != nil {
-				slog.Debug("instruction source not found, skipping", "source", ref.Source, "layer", layerPath)
+				slog.Warn("reading instruction directory", "dir", fullPath, "layer", layerPath, "error", err)
 				continue
 			}
-			if !info.IsDir() {
-				files = append(files, fullPath)
-			} else {
-				// Directory reference — walk and collect .md files
-				entries, err := os.ReadDir(fullPath)
-				if err != nil {
-					slog.Warn("reading instruction directory", "dir", fullPath, "layer", layerPath, "error", err)
-					continue
-				}
-				// Sort by name for deterministic order
-				sort.Slice(entries, func(i, j int) bool {
-					return entries[i].Name() < entries[j].Name()
-				})
-				for _, entry := range entries {
-					if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
-						files = append(files, filepath.Join(fullPath, entry.Name()))
-					}
+			// Sort by name for deterministic order
+			sort.Slice(entries, func(i, j int) bool {
+				return entries[i].Name() < entries[j].Name()
+			})
+			for _, entry := range entries {
+				if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
+					files = append(files, filepath.Join(fullPath, entry.Name()))
 				}
 			}
 		}
@@ -97,34 +106,43 @@ type hookFile struct {
 func resolveHookFiles(layerPath string, refs []schema.FileRef) []hookFile {
 	var result []hookFile
 	for _, ref := range refs {
-		if ref.Source != "" {
-			fullPath := filepath.Join(layerPath, ref.Source)
+		if ref.Source == "" {
+			continue
+		}
+
+		var fullPath string
+		if filepath.IsAbs(ref.Source) {
+			// Already resolved (remote source) — use as-is, skip containment check.
+			fullPath = ref.Source
+		} else {
+			fullPath = filepath.Join(layerPath, ref.Source)
 			if !pathutil.ContainsPath(layerPath, fullPath) {
 				slog.Warn("hook source escapes layer boundary, skipping", "source", ref.Source, "layer", layerPath)
 				continue
 			}
-			info, err := os.Stat(fullPath)
+		}
+
+		info, err := os.Stat(fullPath)
+		if err != nil {
+			slog.Debug("hook source not found, skipping", "source", ref.Source, "layer", layerPath)
+			continue
+		}
+		if !info.IsDir() {
+			result = append(result, hookFile{path: fullPath, rel: ref.Source})
+		} else {
+			// Directory reference — enumerate .json files
+			entries, err := os.ReadDir(fullPath)
 			if err != nil {
-				slog.Debug("hook source not found, skipping", "source", ref.Source, "layer", layerPath)
+				slog.Debug("hook directory cannot be read, skipping", "path", fullPath, "layer", layerPath)
 				continue
 			}
-			if !info.IsDir() {
-				result = append(result, hookFile{path: fullPath, rel: ref.Source})
-			} else {
-				// Directory reference — enumerate .json files
-				entries, err := os.ReadDir(fullPath)
-				if err != nil {
-					slog.Debug("hook directory cannot be read, skipping", "path", fullPath, "layer", layerPath)
+			for _, e := range entries {
+				if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
 					continue
 				}
-				for _, e := range entries {
-					if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
-						continue
-					}
-					filePath := filepath.Join(fullPath, e.Name())
-					rel := filepath.Join(ref.Source, e.Name())
-					result = append(result, hookFile{path: filePath, rel: rel})
-				}
+				filePath := filepath.Join(fullPath, e.Name())
+				rel := filepath.Join(ref.Source, e.Name())
+				result = append(result, hookFile{path: filePath, rel: rel})
 			}
 		}
 	}
@@ -132,26 +150,37 @@ func resolveHookFiles(layerPath string, refs []schema.FileRef) []hookFile {
 }
 
 // resolveFileRefs resolves FileRef entries relative to layerPath.
+// Absolute paths (from remote resolution) are used as-is without containment
+// checks — the remote resolver already validates path safety.
 func resolveFileRefs(layerPath string, refs []schema.FileRef) []resolvedRef {
 	var resolved []resolvedRef
 	for _, ref := range refs {
-		if ref.Source != "" {
-			fullPath := filepath.Join(layerPath, ref.Source)
-			// Validate path stays within layer (symlink protection)
+		if ref.Source == "" {
+			continue
+		}
+
+		var fullPath string
+		if filepath.IsAbs(ref.Source) {
+			// Already resolved (remote source) — use as-is, skip containment check.
+			fullPath = ref.Source
+		} else {
+			fullPath = filepath.Join(layerPath, ref.Source)
+			// Validate local path stays within layer (symlink protection)
 			if !pathutil.ContainsPath(layerPath, fullPath) {
 				slog.Warn("file source escapes layer boundary, skipping", "source", ref.Source, "layer", layerPath)
 				continue
 			}
-			info, err := os.Stat(fullPath)
-			if err != nil {
-				slog.Debug("file source not found, skipping", "source", ref.Source, "layer", layerPath)
-				continue
-			}
-			resolved = append(resolved, resolvedRef{
-				sourcePath: fullPath,
-				isDir:      info.IsDir(),
-			})
 		}
+
+		info, err := os.Stat(fullPath)
+		if err != nil {
+			slog.Debug("file source not found, skipping", "source", ref.Source, "layer", layerPath)
+			continue
+		}
+		resolved = append(resolved, resolvedRef{
+			sourcePath: fullPath,
+			isDir:      info.IsDir(),
+		})
 	}
 	return resolved
 }
@@ -196,12 +225,17 @@ func readAndMergePermissions(layerPath string, refs []schema.FileRef) (map[strin
 			continue
 		}
 
-		fullPath := filepath.Join(layerPath, ref.Source)
-
-		// Validate path stays within layer
-		if !pathutil.ContainsPath(layerPath, fullPath) {
-			slog.Warn("permissions source escapes layer boundary, skipping", "source", ref.Source, "layer", layerPath)
-			continue
+		var fullPath string
+		if filepath.IsAbs(ref.Source) {
+			// Already resolved (remote source) — use as-is, skip containment check.
+			fullPath = ref.Source
+		} else {
+			fullPath = filepath.Join(layerPath, ref.Source)
+			// Validate local path stays within layer
+			if !pathutil.ContainsPath(layerPath, fullPath) {
+				slog.Warn("permissions source escapes layer boundary, skipping", "source", ref.Source, "layer", layerPath)
+				continue
+			}
 		}
 
 		data, err := pathutil.SafeReadFile(fullPath)
@@ -281,6 +315,8 @@ func isRemoteSource(source string) bool {
 }
 
 // resolveFileRefSource resolves a single FileRef source if it is a remote URL.
+// Dispatches based on source type: Git URLs → remote.Resolve (clone),
+// archive URLs → remote.Resolve (download+extract), plain file URLs → FetchFile.
 func resolveFileRefSource(ref *schema.FileRef, cacheBase string, offline bool) error {
 	// Skip empty or local entries.
 	if ref.Source == "" {
@@ -290,7 +326,17 @@ func resolveFileRefSource(ref *schema.FileRef, cacheBase string, offline bool) e
 		return nil
 	}
 
-	cachedPath, err := remote.FetchFile(ref.Source, cacheBase, offline)
+	var cachedPath string
+	var err error
+
+	switch remote.Classify(ref.Source) {
+	case remote.SourceGit, remote.SourceArchive:
+		cachedPath, _, err = remote.Resolve(ref.Source, cacheBase, offline)
+	default:
+		// Plain file URL (no .git, no archive extension) — download as single file.
+		cachedPath, err = remote.FetchFile(ref.Source, cacheBase, offline)
+	}
+
 	if err != nil {
 		return fmt.Errorf("fetching remote file ref %q: %w", ref.Source, err)
 	}
