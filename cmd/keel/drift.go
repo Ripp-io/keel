@@ -9,6 +9,7 @@ import (
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/compiler"
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/drift"
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/manifest"
+	"gitlab.com/ripp.io/oss/agentic/keel/pkg/sarif"
 	"gitlab.com/ripp.io/oss/agentic/keel/pkg/signing"
 )
 
@@ -17,6 +18,7 @@ func newDriftCmd() *cobra.Command {
 	var semantic bool
 	var verify bool
 	var format string
+	var ci bool
 
 	cmd := &cobra.Command{
 		Use:   "drift [dir]",
@@ -30,6 +32,8 @@ Returns non-zero exit code when drift is detected.
 Use --policy to check only force-locked files (policy violations).
 Use --semantic to show semantic changes when drift is detected.
 Use --verify to include signature verification in drift check.
+Use --ci for CI-friendly JSON output (convenience flag).
+Use --format sarif for SARIF 2.1.0 output (CI SAST integration).
 
 Examples:
   keel drift
@@ -37,12 +41,20 @@ Examples:
   keel drift --policy .
   keel drift --semantic
   keel drift --semantic --format json
-  keel drift --verify`,
-		Args: cobra.MaximumNArgs(1),
+  keel drift --verify
+  keel drift --ci
+  keel drift --format sarif`,
+		Args:         cobra.MaximumNArgs(1),
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := "."
 			if len(args) > 0 {
 				dir = args[0]
+			}
+
+			// Handle --ci flag: implies --format json unless --format explicitly set
+			if ci && !cmd.Flags().Changed("format") {
+				format = "json"
 			}
 
 			manifests, paths, err := compiler.FindKeelState(dir)
@@ -78,10 +90,7 @@ Examples:
 				// Build force-lock lookup if --policy is set.
 				var forceLockSet map[string]bool
 				if policyOnly {
-					forceLockSet = make(map[string]bool)
-					for _, fl := range cm.ForceLocked {
-						forceLockSet[fl.Key] = true
-					}
+					forceLockSet = buildForceLockSet(cm)
 					totalForceLocked += len(cm.ForceLocked)
 				}
 
@@ -99,20 +108,23 @@ Examples:
 				}
 				hasDrift = true
 
-				if len(manifests) > 1 {
-					fmt.Fprintf(cmd.OutOrStdout(), "%s:\n", result.Agent)
+				// Only output text format for text mode
+				if format == "text" {
+					if len(manifests) > 1 {
+						fmt.Fprintf(cmd.OutOrStdout(), "%s:\n", result.Agent)
+					}
+					tag := ""
+					if policyOnly {
+						tag = "[policy] "
+					}
+					for _, e := range modified {
+						fmt.Fprintf(cmd.OutOrStdout(), "  %smodified  %s\n", tag, e.Path)
+					}
+					for _, e := range missing {
+						fmt.Fprintf(cmd.OutOrStdout(), "  %smissing   %s\n", tag, e.Path)
+					}
+					fmt.Fprintln(cmd.OutOrStdout())
 				}
-				tag := ""
-				if policyOnly {
-					tag = "[policy] "
-				}
-				for _, e := range modified {
-					fmt.Fprintf(cmd.OutOrStdout(), "  %smodified  %s\n", tag, e.Path)
-				}
-				for _, e := range missing {
-					fmt.Fprintf(cmd.OutOrStdout(), "  %smissing   %s\n", tag, e.Path)
-				}
-				fmt.Fprintln(cmd.OutOrStdout())
 			}
 
 			// Detect semantic drift if --semantic is set (independent of file drift)
@@ -144,7 +156,7 @@ Examples:
 						hasSemanticDrift = true
 						driftResults[i].Semantic = semDiff
 
-						if format != "json" {
+						if format == "text" {
 							if hasDrift {
 								fmt.Fprintln(cmd.OutOrStdout())
 							}
@@ -195,7 +207,7 @@ Examples:
 					driftResults[i].Signatures = sigDrift
 
 					// Text output.
-					if format != "json" {
+					if format == "text" {
 						fmt.Fprintln(cmd.OutOrStdout(), "Signature verification:")
 						if sigDrift.ManifestSigned {
 							if sigDrift.ManifestVerified {
@@ -224,16 +236,18 @@ Examples:
 			}
 
 			if !hasDrift && !hasSemanticDrift && !hasInvalidSignature {
-				if policyOnly {
-					fmt.Fprintln(cmd.OutOrStdout(), "No policy drift detected.")
-				} else {
-					fmt.Fprintln(cmd.OutOrStdout(), "No drift detected.")
+				if format == "text" {
+					if policyOnly {
+						fmt.Fprintln(cmd.OutOrStdout(), "No policy drift detected.")
+					} else {
+						fmt.Fprintln(cmd.OutOrStdout(), "No drift detected.")
+					}
 				}
 				return nil
 			}
 
 			// Print policy summary if --policy is set.
-			if policyOnly && format != "json" {
+			if policyOnly && format == "text" {
 				fmt.Fprintln(cmd.OutOrStdout(), "Policy summary:")
 				fmt.Fprintf(cmd.OutOrStdout(), "  Force-locked files: %d\n", totalForceLocked)
 				fmt.Fprintf(cmd.OutOrStdout(), "  Policy violations: %d\n", policyViolations)
@@ -250,14 +264,64 @@ Examples:
 				}
 			}
 
+			// Output SARIF if requested.
+			if format == "sarif" {
+				report := sarif.NewReport()
+				run := sarif.NewRun("keel", version)
+
+				// Define drift rules
+				run.AddRule("keel/drift/modified", "File content changed",
+					"The file has been modified from its compiled state", "warning")
+				run.AddRule("keel/drift/missing", "File missing",
+					"The file is missing from disk but present in the manifest", "warning")
+				run.AddRule("keel/drift/policy-violation", "Policy violation",
+					"A force-locked file has been modified or is missing", "error")
+
+				// Add results for each manifest
+				for i, cm := range manifests {
+					result := driftResults[i]
+
+					// Build force-lock lookup if --policy is set.
+					var forceLockSet map[string]bool
+					if policyOnly {
+						forceLockSet = buildForceLockSet(cm)
+					}
+
+					// Add modified files
+					addSARIFDriftResults(run, result.Modified, forceLockSet, policyOnly,
+						"keel/drift/modified", "keel/drift/policy-violation", "was modified")
+
+					// Add missing files
+					addSARIFDriftResults(run, result.Missing, forceLockSet, policyOnly,
+						"keel/drift/missing", "keel/drift/policy-violation", "is missing")
+
+					// Add signature verification failures if --verify is set
+					if verify && result.Signatures != nil && !result.Signatures.ManifestVerified {
+						if result.Signatures.ManifestSigned {
+							run.AddResult("keel/drift/policy-violation",
+								fmt.Sprintf("Manifest signature verification failed: %s", result.Signatures.ManifestError),
+								"error", "")
+						}
+					}
+				}
+
+				report.Runs = append(report.Runs, *run)
+				data, sarifErr := report.ToJSON()
+				if sarifErr != nil {
+					return fmt.Errorf("marshaling SARIF report: %w", sarifErr)
+				}
+				fmt.Fprintln(cmd.OutOrStdout(), string(data))
+			}
+
 			return fmt.Errorf("drift detected")
 		},
 	}
 
 	cmd.Flags().BoolVar(&policyOnly, "policy", false, "Check only force-locked files (policy violations)")
 	cmd.Flags().BoolVar(&semantic, "semantic", false, "Show semantic changes when drift detected")
-	cmd.Flags().StringVar(&format, "format", "text", "Output format: text or json")
+	cmd.Flags().StringVar(&format, "format", "text", "Output format: text, json, or sarif")
 	cmd.Flags().BoolVar(&verify, "verify", false, "Include signature verification in drift check")
+	cmd.Flags().BoolVar(&ci, "ci", false, "CI-friendly mode (implies --format json)")
 	return cmd
 }
 
@@ -348,6 +412,37 @@ func renderSemanticDiff(cmd *cobra.Command, diff *manifest.EffectiveStateDiff) {
 				sign = ""
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "    %s: %s%d files\n", cat.Name, sign, cat.CountDelta)
+		}
+	}
+}
+
+// buildForceLockSet creates a lookup map of force-locked file keys.
+func buildForceLockSet(cm *manifest.CompiledManifest) map[string]bool {
+	forceLockSet := make(map[string]bool)
+	for _, fl := range cm.ForceLocked {
+		forceLockSet[fl.Key] = true
+	}
+	return forceLockSet
+}
+
+// addSARIFDriftResults adds SARIF results for drift entries (modified or missing files).
+func addSARIFDriftResults(run *sarif.Run, entries []drift.Record, forceLockSet map[string]bool, policyOnly bool, normalRuleID, policyRuleID, verb string) {
+	for _, entry := range entries {
+		// Check if this is a policy violation
+		isPolicy := false
+		if forceLockSet != nil {
+			isPolicy = forceLockSet[entry.Path] || forceLockSet[filepath.Base(entry.Path)]
+		}
+
+		// Skip if --policy is set and this is not a policy violation
+		if policyOnly && !isPolicy {
+			continue
+		}
+
+		if isPolicy {
+			run.AddResult(policyRuleID, fmt.Sprintf("Force-locked file %s %s", entry.Path, verb), "error", entry.Path)
+		} else {
+			run.AddResult(normalRuleID, fmt.Sprintf("File %s %s", entry.Path, verb), "warning", entry.Path)
 		}
 	}
 }
