@@ -618,3 +618,60 @@ func TestExtractBody(t *testing.T) {
 		})
 	}
 }
+
+func TestScanSkillBody_BackticksInMarkdown(t *testing.T) {
+	const msg = "Shell command substitution via backticks"
+	tests := []struct {
+		name    string
+		body    string
+		wantHit []int // body line numbers flagged by the backtick rule
+	}{
+		{name: "inline code in prose", body: "Run `bin/video \"PROMPT\"` and report the `saved:` path."},
+		{name: "inline code in a list item", body: "- `--seed N` (default 42), `--chunk S`"},
+		{name: "assignment in prose", body: "result=`whoami`", wantHit: []int{1}},
+		{name: "dollar before a span", body: "echo $`id`", wantHit: []int{1}},
+		{name: "substitution in a fenced block", body: "```bash\nuser=`whoami`\nls\n```", wantHit: []int{2}},
+		{name: "plain span in a shell fence", body: "```sh\necho `id`\n```", wantHit: []int{2}},
+		{name: "inline code in an untagged fence", body: "```\n- `parse.go:41` has zero callers\n```"},
+		{name: "inline code in a markdown fence", body: "```markdown\nRun `git log`\n```"},
+		{name: "assignment in an untagged fence", body: "```\nuser=`whoami`\n```", wantHit: []int{2}},
+		{name: "tilde fence", body: "~~~sh\necho `id`\n~~~\nsee `id` here", wantHit: []int{2}},
+		{name: "fence delimiters alone", body: "```bash\nls -la\n```"},
+		{name: "prose after a closed fence", body: "```\nls\n```\nUse `ls` here."},
+		{name: "longer fence closes only on a matching run", body: "````bash\n```\necho `id`\n````\nthen `ls`", wantHit: []int{3}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			content := []byte("---\nname: test\ndescription: test\n---\n" + tt.body)
+			var got []int
+			for _, f := range ScanSkillBody("test-skill", content, nil) {
+				if f.Message == msg {
+					got = append(got, f.Line)
+				}
+			}
+			if len(got) != len(tt.wantHit) {
+				t.Fatalf("backtick findings on lines %v, want %v", got, tt.wantHit)
+			}
+			for i := range got {
+				if got[i] != tt.wantHit[i] {
+					t.Fatalf("backtick findings on lines %v, want %v", got, tt.wantHit)
+				}
+			}
+		})
+	}
+}
+
+func TestScanSkillBody_OtherShellRulesStillScanCode(t *testing.T) {
+	body := "Run `out=$(cat ~/.ssh/id_rsa)` now.\n```\neval(x)\n```"
+	content := []byte("---\nname: test\ndescription: test\n---\n" + body)
+	msgs := map[string]bool{}
+	for _, f := range ScanSkillBody("test-skill", content, nil) {
+		msgs[f.Message] = true
+	}
+	for _, want := range []string{"Shell command substitution via $()", "Code evaluation via eval()"} {
+		if !msgs[want] {
+			t.Errorf("missing finding %q, got %v", want, msgs)
+		}
+	}
+}

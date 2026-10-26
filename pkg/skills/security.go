@@ -25,6 +25,7 @@ type SecurityFinding struct {
 type SecurityRule struct {
 	Category        string         // Category name
 	Pattern         *regexp.Regexp // Compiled regex pattern
+	ProsePattern    *regexp.Regexp // When set, used instead of Pattern outside shell fenced code blocks
 	Message         string         // Human-readable description
 	DefaultSeverity string         // "block" or "warn"
 }
@@ -78,8 +79,12 @@ var builtInRules = []SecurityRule{
 		DefaultSeverity: "block",
 	},
 	{
+		// In Markdown (prose, or a fence that is not tagged as a shell) a backtick pair is inline code,
+		// so there only a span attached to an assignment or a $ (result=`whoami`, $`cmd`) counts.
+		// Inside a shell fence (```bash, ```sh, ...) every pair is substitution.
 		Category:        "shell-injection",
 		Pattern:         regexp.MustCompile("`[^`]*`"),
+		ProsePattern:    regexp.MustCompile("[=$]\\s*`[^`]+`"),
 		Message:         "Shell command substitution via backticks",
 		DefaultSeverity: "block",
 	},
@@ -184,10 +189,27 @@ func ScanSkillBody(skillDir string, content []byte, config *schema.SecurityConfi
 
 	var findings []SecurityFinding
 	lines := strings.Split(string(body), "\n")
+	fence, shellFence := "", false
 
 	for lineNum, line := range lines {
+		// Fence delimiter lines (``` or ~~~, optionally with an info string) are scanned as prose.
+		inShell := fence != "" && shellFence
+		if marker := fenceMarker(line); marker != "" {
+			info := strings.TrimSpace(strings.TrimLeft(strings.TrimSpace(line), marker[:1]))
+			switch {
+			case fence == "":
+				fence, shellFence = marker, isShellInfo(info)
+			case strings.HasPrefix(marker, fence) && info == "":
+				fence, shellFence = "", false
+			}
+			inShell = false
+		}
 		for _, rule := range activeRules {
-			if rule.Pattern.MatchString(line) {
+			pattern := rule.Pattern
+			if !inShell && rule.ProsePattern != nil {
+				pattern = rule.ProsePattern
+			}
+			if pattern.MatchString(line) {
 				severity := rule.DefaultSeverity
 
 				findings = append(findings, SecurityFinding{
@@ -261,6 +283,40 @@ func ScanSkills(layerPath string, keelExists bool, cfg *schema.KeelConfig, confi
 	}
 
 	return allFindings
+}
+
+// fenceMarker returns the run of backticks or tildes (3 or more) that opens or closes a fenced
+// code block on this line, or "" when the line is not a fence delimiter.
+func fenceMarker(line string) string {
+	trimmed := strings.TrimLeft(line, " ")
+	if len(line)-len(trimmed) > 3 || len(trimmed) < 3 {
+		return ""
+	}
+	c := trimmed[0]
+	if c != '`' && c != '~' {
+		return ""
+	}
+	n := 0
+	for n < len(trimmed) && trimmed[n] == c {
+		n++
+	}
+	if n < 3 || (c == '`' && strings.ContainsRune(trimmed[n:], '`')) {
+		return ""
+	}
+	return trimmed[:n]
+}
+
+// isShellInfo reports whether a fence info string (```bash, ~~~ sh {.x}) names a shell language.
+func isShellInfo(info string) bool {
+	fields := strings.Fields(info)
+	if len(fields) == 0 {
+		return false
+	}
+	switch strings.ToLower(strings.Trim(fields[0], "{}.")) {
+	case "bash", "sh", "zsh", "shell", "console", "shell-session", "fish", "ksh":
+		return true
+	}
+	return false
 }
 
 // extractBody returns the markdown content after frontmatter.
